@@ -9,6 +9,7 @@
 -- ------------------------------------------------------------
 CREATE TABLE users (
     id              SERIAL PRIMARY KEY,
+    auth_id         UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     prefix          VARCHAR(10) NOT NULL CHECK (prefix IN ('นาย','นาง','นางสาว')),
     full_name       VARCHAR(150) NOT NULL,
     student_id      VARCHAR(20) UNIQUE,           -- รหัสนิสิต (NULL ถ้าเป็นอาจารย์)
@@ -17,7 +18,6 @@ CREATE TABLE users (
     year_level      SMALLINT,                     -- ชั้นปี (นิสิตเท่านั้น)
     role            VARCHAR(20) NOT NULL CHECK (role IN ('student','instructor','admin')),
     email           VARCHAR(150) UNIQUE,
-    password_hash   TEXT,
     created_at      TIMESTAMP DEFAULT now()
 );
 
@@ -139,29 +139,79 @@ CREATE INDEX idx_booking_equipment_equip ON booking_equipment (equipment_id);
 --   AND (:start_time, :end_time) OVERLAPS (b.start_time, b.end_time);
 
 -- ============================================================
--- Row Level Security (Supabase)
--- เปิดใช้เมื่อ deploy จริง เพื่อป้องกันไม่ให้ client อ่าน/แก้ข้อมูลคนอื่นได้
--- ตอนพัฒนา/ทดสอบเบื้องต้นสามารถข้ามส่วนนี้ไปก่อนได้
+-- Row Level Security (Supabase) — อิงสิทธิ์จริงผ่าน Supabase Auth
 -- ============================================================
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE booking_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE booking_equipment ENABLE ROW LEVEL SECURITY;
-
--- rooms/equipment เป็น master data อ่านได้ทุกคน แก้ได้เฉพาะ admin (ตั้งค่าเพิ่มภายหลังตามระบบ auth จริง)
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE equipment ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "rooms readable by all" ON rooms FOR SELECT USING (true);
-CREATE POLICY "equipment readable by all" ON equipment FOR SELECT USING (true);
 
--- หมายเหตุ: policy ด้านล่างเป็นแบบเปิดกว้างสำหรับช่วง prototype
--- (อนุญาต insert/select แบบ public) เมื่อเพิ่มระบบ login จริงแล้ว
--- ควรเปลี่ยนเป็นอิง auth.uid() แทน
-CREATE POLICY "public insert booking" ON bookings FOR INSERT WITH CHECK (true);
-CREATE POLICY "public select booking" ON bookings FOR SELECT USING (true);
-CREATE POLICY "public insert booking_rooms" ON booking_rooms FOR INSERT WITH CHECK (true);
-CREATE POLICY "public select booking_rooms" ON booking_rooms FOR SELECT USING (true);
-CREATE POLICY "public insert booking_equipment" ON booking_equipment FOR INSERT WITH CHECK (true);
-CREATE POLICY "public select booking_equipment" ON booking_equipment FOR SELECT USING (true);
-CREATE POLICY "public insert users" ON users FOR INSERT WITH CHECK (true);
-CREATE POLICY "public select users" ON users FOR SELECT USING (true);
+-- master data: อ่านได้ทุกคนที่ login แล้ว
+CREATE POLICY "rooms readable by authenticated" ON rooms
+  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "equipment readable by authenticated" ON equipment
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- ผู้ใช้เห็น/แก้ไขข้อมูลตัวเองได้ อาจารย์เห็นได้ทุกคน (ใช้เช็คตอนอนุมัติ)
+CREATE POLICY "user reads own profile" ON users
+  FOR SELECT USING (
+    auth_id = auth.uid()
+    OR EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role IN ('instructor','admin'))
+  );
+CREATE POLICY "user inserts own profile" ON users
+  FOR INSERT WITH CHECK (auth_id = auth.uid());
+CREATE POLICY "user updates own profile" ON users
+  FOR UPDATE USING (auth_id = auth.uid());
+
+-- bookings: เจ้าของคำขอเห็น/แก้ของตัวเองได้, อาจารย์เห็น/แก้ได้ทุกคำขอ (อนุมัติ), เจ้าหน้าที่ (admin) เห็น/แก้ได้ทุกคำขอ (รับ-คืน)
+CREATE POLICY "select own or staff" ON bookings
+  FOR SELECT USING (
+    user_id IN (SELECT id FROM users WHERE auth_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role IN ('instructor','admin'))
+  );
+CREATE POLICY "insert own booking" ON bookings
+  FOR INSERT WITH CHECK (user_id IN (SELECT id FROM users WHERE auth_id = auth.uid()));
+CREATE POLICY "update by staff or owner" ON bookings
+  FOR UPDATE USING (
+    user_id IN (SELECT id FROM users WHERE auth_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role IN ('instructor','admin'))
+  );
+
+-- booking_rooms / booking_equipment: สืบสิทธิ์จาก bookings ที่มองเห็นได้
+CREATE POLICY "select booking_rooms via booking" ON booking_rooms
+  FOR SELECT USING (booking_id IN (SELECT id FROM bookings));
+CREATE POLICY "insert booking_rooms via booking" ON booking_rooms
+  FOR INSERT WITH CHECK (booking_id IN (SELECT id FROM bookings));
+
+CREATE POLICY "select booking_equipment via booking" ON booking_equipment
+  FOR SELECT USING (booking_id IN (SELECT id FROM bookings));
+CREATE POLICY "insert booking_equipment via booking" ON booking_equipment
+  FOR INSERT WITH CHECK (booking_id IN (SELECT id FROM bookings));
+CREATE POLICY "update booking_equipment via booking" ON booking_equipment
+  FOR UPDATE USING (booking_id IN (SELECT id FROM bookings));
+
+-- ------------------------------------------------------------
+-- Trigger: สร้างแถวใน public.users อัตโนมัติเมื่อมีคน sign up ใหม่
+-- (ข้อมูลรายละเอียด เช่น ชื่อ/รหัสนิสิต จะถูกกรอกเพิ่มจากหน้าเว็บหลัง signup)
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (auth_id, prefix, full_name, phone, role, email)
+  VALUES (
+    NEW.id,
+    'นาย',
+    COALESCE(NEW.raw_user_meta_data->>'full_name', 'ผู้ใช้ใหม่'),
+    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+    COALESCE(NEW.raw_user_meta_data->>'role', 'student'),
+    NEW.email
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();

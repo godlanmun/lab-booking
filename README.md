@@ -1,68 +1,81 @@
-# ระบบจองห้อง Lab — คู่มือ Deploy ออนไลน์ฟรี
+# ระบบจองห้อง Lab — คู่มือ (อัปเดต: มีระบบ Login แยกสิทธิ์ + ปฏิทินรวม)
 
-เว็บเดียวมี 3 หน้า เข้าถึงผ่านเมนูด้านบน:
-- `/` — ยื่นคำขอจอง (นิสิต/อาจารย์)
-- `/approve` — อนุมัติคำขอ (อาจารย์)
-- `/staff` — รับ-คืนอุปกรณ์ (เจ้าหน้าที่)
+เว็บเดียวมี 4 หน้า เข้าถึงผ่านเมนูด้านบน (เมนูจะโชว์ไม่เท่ากันตาม role):
+- `/` — ยื่นคำขอจอง (ทุก role)
+- `/calendar` — ปฏิทินการจอง เห็นร่วมกันทุก role (นิสิต+อาจารย์+เจ้าหน้าที่)
+- `/approve` — อนุมัติคำขอ (เฉพาะ role `instructor`)
+- `/staff` — รับ-คืนอุปกรณ์ (เฉพาะ role `admin` = เจ้าหน้าที่)
+- `/login` — เข้าสู่ระบบ / สมัครสมาชิก
 
 ---
 
-## ขั้นที่ 1: ตั้งค่า Supabase (ฐานข้อมูล — ฟรี)
+## ⚠️ ถ้าเคย deploy ระบบเดิมไปแล้ว (มีข้อมูลอยู่ใน Supabase แล้ว)
 
-1. สมัครที่ https://supabase.com ด้วย GitHub account
-2. New Project → ตั้งชื่อ + รหัสผ่าน DB (เก็บไว้ให้ดี) → เลือก region ใกล้ไทย (Singapore)
-3. เข้า **SQL Editor** → New query → คัดลอกทั้งหมดจาก `schema.sql` มาวาง → กด Run
-4. ไปที่ **Project Settings > API** คัดลอก 2 ค่านี้เก็บไว้:
-   - `Project URL`
-   - `anon public` key
+**อย่ารัน `schema.sql` ซ้ำ** ให้รัน **`migration_auth.sql`** แทนใน SQL Editor
+(ไฟล์นี้จะเพิ่มคอลัมน์ auth_id + ปรับ policy ให้ปลอดภัยขึ้น โดยไม่ลบข้อมูลเดิม)
 
-## ขั้นที่ 2: ทดสอบรันในเครื่องก่อน (ไม่บังคับ แต่แนะนำ)
+## ถ้าเริ่มใหม่ทั้งหมด
+
+รัน `schema.sql` ไฟล์เดียวพอ (มี auth support รวมอยู่แล้ว)
+
+---
+
+## ขั้นที่ 1: เปิดใช้ Email Auth ใน Supabase
+
+1. ไปที่ Supabase Dashboard > **Authentication** > **Providers**
+2. ตรวจสอบว่า **Email** เปิดใช้งานอยู่ (ปกติเปิดเป็นค่าเริ่มต้น)
+3. ไปที่ **Authentication > Settings** → ถ้าต้องการทดสอบเร็วๆ ปิด "Confirm email" ไว้ก่อน (ผู้ใช้สมัครแล้ว login ได้ทันทีไม่ต้องกดยืนยันอีเมล) — ตอนใช้งานจริงแนะนำเปิดกลับไว้เพื่อความปลอดภัย
+
+## ขั้นที่ 2: รัน SQL (schema.sql หรือ migration_auth.sql ตามสถานการณ์ด้านบน)
+
+## ขั้นที่ 3: ตั้งค่าบัญชีเจ้าหน้าที่ (staff/admin)
+
+ระบบสมัครสมาชิกในหน้าเว็บมีแค่ 2 ตัวเลือก: **นิสิต (student)** และ **อาจารย์ (instructor)**
+เพราะบัญชี **เจ้าหน้าที่ (admin)** ควรมีน้อยคนและตั้งเองผ่าน SQL เพื่อความปลอดภัย:
+
+1. ให้เจ้าหน้าที่สมัครสมาชิกผ่านหน้าเว็บก่อน (เลือก role ใดก็ได้ชั่วคราว)
+2. ไปที่ SQL Editor รัน:
+   ```sql
+   UPDATE users SET role = 'admin' WHERE email = 'อีเมลเจ้าหน้าที่@example.com';
+   ```
+3. ให้เจ้าหน้าที่ logout แล้ว login ใหม่ จะเห็นเมนู "รับ-คืน" ปรากฏขึ้น
+
+## ขั้นที่ 4: ทดสอบในเครื่อง
 
 ```bash
 npm install
 cp .env.example .env
-# แก้ .env ใส่ค่า Supabase URL และ anon key ที่คัดลอกไว้
+# ใส่ค่า Supabase URL และ anon key
 npm run dev
 ```
-เปิด http://localhost:5173 ทดสอบยื่นคำขอ → เข้า `/approve` อนุมัติ → เข้า `/staff` ส่งมอบ/รับคืน
+ทดสอบ: สมัครนิสิต 1 คน → ยื่นคำขอ → login เป็นอาจารย์ → อนุมัติ → login เป็นเจ้าหน้าที่ (admin) → รับ-คืน → เช็คปฏิทินว่าทุก role เห็นการจองเดียวกัน
 
-## ขั้นที่ 3: ขึ้น GitHub
+## ขั้นที่ 5: Deploy (เหมือนเดิม)
 
-```bash
-git init
-git add .
-git commit -m "lab booking system"
-```
-สร้าง repo ใหม่ที่ https://github.com/new (private ได้ ฟรี) แล้ว push:
-```bash
-git remote add origin https://github.com/<username>/lab-booking.git
-git branch -M main
-git push -u origin main
-```
-**สำคัญ:** อย่า commit ไฟล์ `.env` (ไฟล์ `.gitignore` กันไว้ให้แล้ว)
-
-## ขั้นที่ 4: Deploy บน Vercel (ฟรี)
-
-1. สมัคร https://vercel.com ด้วย GitHub account เดียวกัน
-2. **Add New Project** → เลือก repo `lab-booking` → Import
-3. ก่อนกด Deploy ไปที่ **Environment Variables** ใส่:
-   - `VITE_SUPABASE_URL` = ค่าจาก Supabase
-   - `VITE_SUPABASE_ANON_KEY` = ค่าจาก Supabase
-4. กด **Deploy** รอประมาณ 1 นาที
-5. ได้ URL ทันที เช่น `https://lab-booking-xxxx.vercel.app`
-
-จากนี้ทุกครั้งที่ `git push` ขึ้น GitHub, Vercel จะ build และอัปเดตเว็บให้อัตโนมัติ
+Push ขึ้น GitHub → Import เข้า Vercel → ใส่ Environment Variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) → Deploy
 
 ---
 
-## ข้อควรระวัง (free tier)
+## สรุปการแยกสิทธิ์ (Role-based access)
 
-- **Supabase**: โปรเจกต์ pause อัตโนมัติถ้าไม่มีการใช้งานติดต่อกัน 7 วัน (มีอีเมลแจ้งเตือนก่อน) เข้าไปกด "Resume" ใน dashboard ได้ทันที ไม่มีข้อมูลหาย
-- **Vercel**: ฟรีสำหรับใช้งานทั่วไป ไม่จำกัดเวลา แต่ห้ามใช้เชิงพาณิชย์แบบมีรายได้ตรง — โปรเจกต์คณะ/มหาวิทยาลัยใช้ได้ปกติ
-- **RLS policy** ในไฟล์ `schema.sql` ตอนนี้เป็นแบบเปิดกว้าง (public insert/select) เหมาะสำหรับ prototype เมื่อจะใช้งานจริงกับข้อมูลนิสิตจำนวนมาก แนะนำเพิ่มระบบ Auth ก่อน
+| Role | ยื่นคำขอ | ดูปฏิทิน | อนุมัติ | รับ-คืน |
+|---|:---:|:---:|:---:|:---:|
+| `student` (นิสิต) | ✅ | ✅ | ❌ | ❌ |
+| `instructor` (อาจารย์) | ✅ | ✅ | ✅ | ❌ |
+| `admin` (เจ้าหน้าที่) | ✅ | ✅ | ✅ | ✅ |
 
-## อยากได้โดเมนของคณะ (ไม่บังคับ)
-ถ้าต้องการ URL แบบ `booking.faculty.ac.th` แทน `.vercel.app`:
-1. ไปที่ Vercel Project > Settings > Domains > ใส่โดเมนที่ต้องการ
-2. เอาค่า CNAME ที่ Vercel ให้มา ไปแจ้งทีมไอทีของมหาวิทยาลัยตั้งค่า DNS
-3. ไม่มีค่าใช้จ่ายเพิ่มฝั่ง Vercel (โดเมนต้องเป็นของมหาวิทยาลัยอยู่แล้ว)
+การป้องกันมี 2 ชั้น:
+1. **หน้าเว็บ** — `ProtectedRoute` ซ่อน/บล็อกหน้าตาม role
+2. **ฐานข้อมูล (RLS policy)** — แม้มีคนพยายามยิง API ตรงข้าม frontend ก็ยังถูก Supabase บล็อกอยู่ดี เพราะ policy เช็คจาก `auth.uid()` จริง ไม่ใช่ข้อมูลที่ frontend ส่งมา
+
+## ปฏิทินการจอง (`/calendar`)
+
+- แสดงแบบ month view คลิกวันเพื่อดูรายละเอียดคำขอในวันนั้น
+- กรองตามห้องได้ (dropdown มุมขวาบน)
+- สีแสดงสถานะ: เหลือง=รออนุมัติ, เขียว=อนุมัติแล้ว, ฟ้า=กำลังยืม
+- นิสิตกับอาจารย์เห็นข้อมูลชุดเดียวกัน (ผ่าน RLS policy `select own or staff` — ทุกคนที่ login แล้วเห็นคำขอที่ pending/approved/borrowed ทั้งหมด เพื่อเช็คห้องว่าง)
+
+## ขั้นต่อไปที่แนะนำ (ไม่บังคับ)
+- เปิด "Confirm email" ใน Supabase Auth settings ก่อนใช้งานจริง กันคนสมัครด้วยอีเมลปลอม
+- เพิ่มหน้า "ประวัติการจองของฉัน" ให้นิสิตดูสถานะคำขอตัวเอง
+- ถ้าอยากได้ Google/LINE login แทน email+password ในอนาคต ทำได้โดยเพิ่ม provider ใน Supabase Auth

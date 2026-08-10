@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { createBooking } from "./bookingApi";
+import { useAuth } from "./AuthContext";
 
 const ROOMS = ["Production Studio", "Control Room", "Sound Recording Room", "Computer (Mac PC)"];
 
@@ -42,14 +43,8 @@ function Checkbox({ checked, onChange, label }) {
 }
 
 export default function BookingForm() {
+  const { profile } = useAuth();
   const [form, setForm] = useState({
-    prefix: "นาย",
-    fullName: "",
-    studentId: "",
-    phone: "",
-    major: "",
-    year: "",
-    role: "student",
     purpose: "teaching",
     purposeDetail: "",
     rooms: [],
@@ -82,10 +77,6 @@ export default function BookingForm() {
 
   const handleSubmit = async () => {
     setError("");
-    if (!form.fullName || !form.studentId || !form.phone) {
-      setError("กรุณากรอกชื่อ, รหัสนิสิต และเบอร์โทรให้ครบถ้วน");
-      return;
-    }
     if (form.rooms.length === 0) {
       setError("กรุณาเลือกห้อง Lab อย่างน้อย 1 ห้อง");
       return;
@@ -106,11 +97,9 @@ export default function BookingForm() {
 
     setLoading(true);
     try {
-      await createBooking(form);
+      await createBooking(form, profile?.id);
       setSubmitted(true);
     } catch (err) {
-      // err.message มาจาก conflict check ใน bookingApi.js (ห้อง/อุปกรณ์ไม่ว่าง)
-      // หรือจาก Supabase ถ้าเชื่อมต่อ/insert ล้มเหลว
       setError(err.message || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
     } finally {
       setLoading(false);
@@ -153,48 +142,17 @@ export default function BookingForm() {
         </div>
 
         <div className="bg-white border border-neutral-200 rounded-lg p-6 sm:p-8">
-          {/* ผู้ขอใช้ */}
+          {/* ผู้ขอใช้ (จากบัญชีที่ login) */}
           <Section number="01" title="ข้อมูลผู้ขอใช้">
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              <select value={form.prefix} onChange={update("prefix")} className="col-span-1 border border-neutral-300 rounded-md px-3 py-2 text-sm">
-                <option>นาย</option>
-                <option>นาง</option>
-                <option>นางสาว</option>
-              </select>
-              <input
-                placeholder="ชื่อ-นามสกุล"
-                value={form.fullName}
-                onChange={update("fullName")}
-                className="col-span-2 border border-neutral-300 rounded-md px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <input
-                placeholder="รหัสนิสิต"
-                value={form.studentId}
-                onChange={update("studentId")}
-                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
-              />
-              <input
-                placeholder="เบอร์โทรที่ติดต่อได้"
-                value={form.phone}
-                onChange={update("phone")}
-                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                placeholder="สาขาวิชา"
-                value={form.major}
-                onChange={update("major")}
-                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
-              />
-              <input
-                placeholder="ชั้นปี"
-                value={form.year}
-                onChange={update("year")}
-                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
-              />
+            <div className="bg-neutral-50 rounded-md px-4 py-3 text-sm">
+              <p className="font-medium text-neutral-900">
+                {profile?.prefix}
+                {profile?.full_name}
+              </p>
+              <p className="text-neutral-500 text-xs mt-0.5">
+                {profile?.student_id ? `รหัสนิสิต ${profile.student_id} · ` : ""}
+                {profile?.major} {profile?.year_level ? `ชั้นปี ${profile.year_level}` : ""}
+              </p>
             </div>
           </Section>
 

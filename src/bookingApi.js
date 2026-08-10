@@ -1,38 +1,6 @@
 import { supabase } from "./supabaseClient";
 
 /**
- * ค้นหา / สร้าง user จาก รหัสนิสิต (student_id)
- * ถ้ามีอยู่แล้วให้ใช้ id เดิม ถ้ายังไม่มีให้สร้างใหม่
- */
-export async function upsertUser({ prefix, fullName, studentId, phone, major, year, role }) {
-  const { data: existing, error: findErr } = await supabase
-    .from("users")
-    .select("id")
-    .eq("student_id", studentId)
-    .maybeSingle();
-
-  if (findErr) throw findErr;
-  if (existing) return existing.id;
-
-  const { data, error } = await supabase
-    .from("users")
-    .insert({
-      prefix,
-      full_name: fullName,
-      student_id: studentId,
-      phone,
-      major,
-      year_level: year || null,
-      role,
-    })
-    .select("id")
-    .single();
-
-  if (error) throw error;
-  return data.id;
-}
-
-/**
  * ดึง id ของห้อง/อุปกรณ์ จากชื่อ (ตาราง rooms / equipment เป็น master data คงที่)
  */
 async function getIdsByNames(table, names) {
@@ -108,9 +76,12 @@ export async function checkEquipmentAvailability({ equipmentNames, useDate, star
 
 /**
  * สร้างคำขอจองแบบเต็ม: ตรวจสอบ conflict ก่อน แล้วค่อย insert
+ * userId: id ของผู้ใช้ (จาก public.users, ได้จาก profile ที่ login อยู่)
  * throw Error พร้อมข้อความภาษาไทยถ้าห้อง/อุปกรณ์ไม่ว่าง
  */
-export async function createBooking(form) {
+export async function createBooking(form, userId) {
+  if (!userId) throw new Error("กรุณาเข้าสู่ระบบก่อนทำการจอง");
+
   const roomIds = await getIdsByNames("rooms", form.rooms);
   const equipmentNames = Object.keys(form.equipment).filter((k) => form.equipment[k]);
 
@@ -137,23 +108,12 @@ export async function createBooking(form) {
     throw new Error(`อุปกรณ์ไม่พอในช่วงเวลาที่เลือก: ${msg}`);
   }
 
-  // 3. หา/สร้างผู้ใช้
-  const userId = await upsertUser({
-    prefix: form.prefix,
-    fullName: form.fullName,
-    studentId: form.studentId,
-    phone: form.phone,
-    major: form.major,
-    year: form.year,
-    role: form.role || "student",
-  });
-
-  // 4. คำนวณชั่วโมงใช้งาน
+  // 3. คำนวณชั่วโมงใช้งาน
   const [sh, sm] = form.startTime.split(":").map(Number);
   const [eh, em] = form.endTime.split(":").map(Number);
   const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
 
-  // 5. สร้างคำขอจอง (bookings)
+  // 4. สร้างคำขอจอง (bookings)
   const { data: booking, error: bookingErr } = await supabase
     .from("bookings")
     .insert({
@@ -173,7 +133,7 @@ export async function createBooking(form) {
 
   if (bookingErr) throw bookingErr;
 
-  // 6. ผูกห้องที่เลือก
+  // 5. ผูกห้องที่เลือก
   if (roomIds.length > 0) {
     const { error: roomErr } = await supabase
       .from("booking_rooms")
@@ -181,7 +141,7 @@ export async function createBooking(form) {
     if (roomErr) throw roomErr;
   }
 
-  // 7. ผูกอุปกรณ์ที่เลือก
+  // 6. ผูกอุปกรณ์ที่เลือก
   if (equipmentNames.length > 0) {
     const equipmentIds = await getIdsByNames("equipment", equipmentNames);
     const { error: eqErr } = await supabase
