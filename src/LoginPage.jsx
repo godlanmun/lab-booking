@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { signIn, signUp, completeProfile } from "./authApi";
+import { signIn, signUp, completeProfile, isStudentIdTaken, translateAuthError } from "./authApi";
 import { useAuth } from "./AuthContext";
 
 export default function LoginPage() {
@@ -38,6 +38,13 @@ export default function LoginPage() {
         if (form.role === "student" && !form.studentId) {
           throw new Error("กรุณากรอกรหัสนิสิต");
         }
+        // เช็ครหัสนิสิตซ้ำก่อนสมัคร กันสร้างบัญชีค้างถ้ารหัสซ้ำ
+        if (form.role === "student") {
+          const taken = await isStudentIdTaken(form.studentId);
+          if (taken) {
+            throw new Error("รหัสนิสิตนี้มีผู้ใช้สมัครสมาชิกไปแล้ว กรุณาตรวจสอบรหัสนิสิตอีกครั้ง");
+          }
+        }
         await signUp({
           email: form.email,
           password: form.password,
@@ -57,7 +64,7 @@ export default function LoginPage() {
       await refreshProfile();
       navigate("/");
     } catch (err) {
-      setError(err.message || "เกิดข้อผิดพลาด กรุณาลองใหม่");
+      setError(translateAuthError(err));
     } finally {
       setLoading(false);
     }

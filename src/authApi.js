@@ -1,6 +1,40 @@
 import { supabase } from "./supabaseClient";
 
 /**
+ * แปล error message ดิบจาก Supabase/Postgres ให้เป็นภาษาไทยที่เข้าใจง่าย
+ * ใช้ครอบ error ก่อนโชว์ให้ผู้ใช้เห็นในทุกจุดของหน้า login/signup
+ */
+export function translateAuthError(err) {
+  const msg = err?.message || "";
+  if (msg.includes("User already registered") || msg.includes("already registered")) {
+    return "อีเมลนี้ถูกใช้สมัครสมาชิกไปแล้ว กรุณาเข้าสู่ระบบแทน หรือใช้อีเมลอื่น";
+  }
+  if (msg.includes("Invalid login credentials")) {
+    return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+  }
+  if (msg.includes("Password should be at least")) {
+    return "รหัสผ่านสั้นเกินไป กรุณาตั้งอย่างน้อย 6 ตัวอักษร";
+  }
+  if (msg.includes("users_student_id_key") || msg.includes("duplicate key")) {
+    return "รหัสนิสิตนี้มีผู้ใช้สมัครสมาชิกไปแล้ว กรุณาตรวจสอบรหัสนิสิตอีกครั้ง";
+  }
+  if (msg.includes("Email not confirmed")) {
+    return "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ (เช็คกล่องจดหมายของคุณ)";
+  }
+  return msg || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+}
+
+/**
+ * เช็คว่ารหัสนิสิตนี้ถูกใช้สมัครไปแล้วหรือยัง (เรียกได้แม้ยังไม่ login)
+ * ใช้เช็คก่อนกด signUp เพื่อกันสร้างบัญชี auth ค้างกรณีรหัสซ้ำ
+ */
+export async function isStudentIdTaken(studentId) {
+  const { data, error } = await supabase.rpc("check_student_id_taken", { p_student_id: studentId });
+  if (error) throw error;
+  return data === true;
+}
+
+/**
  * สมัครสมาชิกใหม่ (นิสิต หรือ อาจารย์)
  * หลังสมัคร Supabase trigger จะสร้างแถวใน public.users ให้อัตโนมัติ (role/full_name/phone เบื้องต้น)
  * แล้วเราค่อย update รายละเอียดเพิ่ม (รหัสนิสิต, สาขา, ชั้นปี) ด้วย completeProfile()

@@ -5,8 +5,24 @@ import { useAuth } from "./AuthContext";
 
 const ROOMS = ["Production Studio", "Control Room", "Sound Recording Room", "Computer (Mac PC)"];
 
-const EQUIPMENT_LEFT = ["กล้อง", "เลนส์", "แบตเตอรี่", "Memory", "ขาตั้งกล้อง", "สายสัญญาณ", "อื่นๆ"];
-const EQUIPMENT_RIGHT = ["กระเป๋า", "ฟิวเตอร์เลนส์", "ที่ชาร์จแบต", "ไมค์", "สายไฟ", "ราง Dolly", "อื่นๆ"];
+const EQUIPMENT_LEFT = [
+  { key: "กล้อง", label: "กล้อง" },
+  { key: "เลนส์", label: "เลนส์" },
+  { key: "แบตเตอรี่", label: "แบตเตอรี่" },
+  { key: "Memory", label: "Memory" },
+  { key: "ขาตั้งกล้อง", label: "ขาตั้งกล้อง" },
+  { key: "สายสัญญาณ", label: "สายสัญญาณ" },
+  { key: "equipment_other_left", label: "อื่นๆ" },
+];
+const EQUIPMENT_RIGHT = [
+  { key: "กระเป๋า", label: "กระเป๋า" },
+  { key: "ฟิวเตอร์เลนส์", label: "ฟิวเตอร์เลนส์" },
+  { key: "ที่ชาร์จแบต", label: "ที่ชาร์จแบต" },
+  { key: "ไมค์", label: "ไมค์" },
+  { key: "สายไฟ", label: "สายไฟ" },
+  { key: "ราง Dolly", label: "ราง Dolly" },
+  { key: "equipment_other_right", label: "อื่นๆ" },
+];
 
 const PURPOSES = [
   { value: "teaching", label: "การเรียนการสอนในรายวิชา" },
@@ -47,6 +63,8 @@ export default function BookingForm() {
   const [form, setForm] = useState({
     purpose: "teaching",
     purposeDetail: "",
+    equipmentOtherLeft: "",
+    equipmentOtherRight: "",
     rooms: [],
     equipment: {},
     useDate: "",
@@ -77,6 +95,10 @@ export default function BookingForm() {
 
   const handleSubmit = async () => {
     setError("");
+    if (form.purpose === "teaching" && !form.purposeDetail.trim()) {
+      setError("กรุณาระบุชื่อรายวิชา");
+      return;
+    }
     if (form.rooms.length === 0) {
       setError("กรุณาเลือกห้อง Lab อย่างน้อย 1 ห้อง");
       return;
@@ -95,15 +117,32 @@ export default function BookingForm() {
       return;
     }
 
+    // รวมข้อความ "อุปกรณ์อื่นๆ" (ถ้ามี) เข้าไปในวัตถุประสงค์ที่บันทึกจริง
+    // เพราะ schema เดิมยังไม่มีคอลัมน์แยกสำหรับอุปกรณ์กำหนดเอง
+    const otherEquipmentNotes = [];
+    if (form.equipment.equipment_other_left && form.equipmentOtherLeft.trim()) {
+      otherEquipmentNotes.push(form.equipmentOtherLeft.trim());
+    }
+    if (form.equipment.equipment_other_right && form.equipmentOtherRight.trim()) {
+      otherEquipmentNotes.push(form.equipmentOtherRight.trim());
+    }
+    const combinedPurposeDetail = [
+      form.purposeDetail.trim() || null,
+      otherEquipmentNotes.length ? `อุปกรณ์อื่นๆ: ${otherEquipmentNotes.join(", ")}` : null,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
     setLoading(true);
     try {
-      await createBooking(form, profile?.id);
+      await createBooking({ ...form, purposeDetail: combinedPurposeDetail }, profile?.id);
       setSubmitted(true);
     } catch (err) {
       setError(err.message || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
     } finally {
       setLoading(false);
     }
+
   };
 
   if (submitted) {
@@ -118,7 +157,7 @@ export default function BookingForm() {
             คำขอของคุณอยู่ระหว่างรอการอนุมัติจากอาจารย์ผู้รับผิดชอบ
           </p>
           <div className="text-left bg-neutral-50 rounded-md p-4 text-sm text-neutral-600 space-y-1 mb-6">
-            <p><span className="text-neutral-400">ผู้ขอใช้:</span> {form.prefix}{form.fullName}</p>
+            <p><span className="text-neutral-400">ผู้ขอใช้:</span> {profile?.prefix}{profile?.full_name}</p>
             <p><span className="text-neutral-400">ห้อง:</span> {form.rooms.join(", ")}</p>
             <p><span className="text-neutral-400">วันที่ใช้:</span> {form.useDate} เวลา {form.startTime}–{form.endTime}</p>
           </div>
@@ -171,6 +210,14 @@ export default function BookingForm() {
                   {p.label}
                 </label>
               ))}
+              {form.purpose === "teaching" && (
+                <input
+                  placeholder="ระบุชื่อรายวิชา"
+                  value={form.purposeDetail}
+                  onChange={update("purposeDetail")}
+                  className="mt-1 w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+                />
+              )}
               {form.purpose === "other" && (
                 <input
                   placeholder="โปรดระบุ..."
@@ -196,12 +243,40 @@ export default function BookingForm() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <div className="space-y-3">
                 {EQUIPMENT_LEFT.map((item) => (
-                  <Checkbox key={item} label={item} checked={!!form.equipment[item]} onChange={() => toggleEquipment(item)} />
+                  <div key={item.key}>
+                    <Checkbox
+                      label={item.label}
+                      checked={!!form.equipment[item.key]}
+                      onChange={() => toggleEquipment(item.key)}
+                    />
+                    {item.key === "equipment_other_left" && form.equipment[item.key] && (
+                      <input
+                        placeholder="ระบุอุปกรณ์อื่นๆ..."
+                        value={form.equipmentOtherLeft}
+                        onChange={update("equipmentOtherLeft")}
+                        className="mt-1.5 w-full border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
               <div className="space-y-3">
                 {EQUIPMENT_RIGHT.map((item) => (
-                  <Checkbox key={item} label={item} checked={!!form.equipment[item]} onChange={() => toggleEquipment(item)} />
+                  <div key={item.key}>
+                    <Checkbox
+                      label={item.label}
+                      checked={!!form.equipment[item.key]}
+                      onChange={() => toggleEquipment(item.key)}
+                    />
+                    {item.key === "equipment_other_right" && form.equipment[item.key] && (
+                      <input
+                        placeholder="ระบุอุปกรณ์อื่นๆ..."
+                        value={form.equipmentOtherRight}
+                        onChange={update("equipmentOtherRight")}
+                        className="mt-1.5 w-full border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
             </div>

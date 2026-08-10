@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { CalendarPlus, ClipboardCheck, PackageCheck, CalendarDays, LogOut } from "lucide-react";
+import { CalendarPlus, ClipboardCheck, PackageCheck, CalendarDays, LogOut, BarChart3 } from "lucide-react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
 import LoginPage from "./LoginPage";
@@ -7,6 +7,7 @@ import BookingForm from "./BookingForm.jsx";
 import ApprovalPage from "./ApprovalPage.jsx";
 import StaffDashboard from "./StaffDashboard.jsx";
 import CalendarView from "./CalendarView.jsx";
+import UsageSummary from "./UsageSummary.jsx";
 import { signOut } from "./authApi";
 
 function TopNav() {
@@ -18,7 +19,8 @@ function TopNav() {
     { path: "/", label: "ยื่นคำขอจอง", icon: CalendarPlus, roles: ["student", "instructor", "admin"] },
     { path: "/calendar", label: "ปฏิทินการจอง", icon: CalendarDays, roles: ["student", "instructor", "admin"] },
     { path: "/approve", label: "อนุมัติ", icon: ClipboardCheck, roles: ["instructor", "admin"] },
-    { path: "/staff", label: "รับ-คืน", icon: PackageCheck, roles: ["admin"] },
+    { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck, roles: ["admin"] },
+    { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3, roles: ["instructor"] },
   ].filter((item) => !profile || item.roles.includes(profile.role));
 
   const handleLogout = async () => {
@@ -107,6 +109,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <StaffDashboardWrapper />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/summary"
+          element={
+            <ProtectedRoute allowedRoles={["instructor"]}>
+              <UsageSummary />
             </ProtectedRoute>
           }
         />
