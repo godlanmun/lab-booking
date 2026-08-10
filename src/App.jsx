@@ -19,7 +19,7 @@ function TopNav() {
     { path: "/", label: "ยื่นคำขอจอง", icon: CalendarPlus, roles: ["student", "instructor", "admin"] },
     { path: "/calendar", label: "ปฏิทินการจอง", icon: CalendarDays, roles: ["student", "instructor", "admin"] },
     { path: "/approve", label: "อนุมัติ", icon: ClipboardCheck, roles: ["instructor", "admin"] },
-    { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck, roles: ["admin"] },
+    { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck, roles: ["instructor", "admin"] },
     { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3, roles: ["instructor"] },
   ].filter((item) => !profile || item.roles.includes(profile.role));
 
@@ -107,7 +107,7 @@ function AppRoutes() {
         <Route
           path="/staff"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={["instructor", "admin"]}>
               <StaffDashboardWrapper />
             </ProtectedRoute>
           }
