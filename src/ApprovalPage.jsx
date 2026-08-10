@@ -8,8 +8,10 @@ import {
   ChevronUp,
   Camera,
   DoorOpen,
+  Pencil,
+  Trash2,
 } from "lucide-react";
-import { listBookings, reviewBooking } from "./reviewApi";
+import { listBookings, reviewBooking, updateBookingDetails, deleteBooking } from "./reviewApi";
 
 const PURPOSE_LABEL = {
   teaching: "การเรียนการสอนในรายวิชา",
@@ -76,9 +78,149 @@ function RejectDialog({ onCancel, onConfirm }) {
   );
 }
 
-function BookingCard({ booking, onApprove, onReject, busy }) {
+function EditDialog({ booking, onCancel, onConfirm, busy }) {
+  const [form, setForm] = useState({
+    useDate: booking.use_date,
+    startTime: booking.start_time?.slice(0, 5) || "",
+    endTime: booking.end_time?.slice(0, 5) || "",
+    returnDate: booking.return_date || booking.use_date,
+    purpose: booking.purpose,
+    purposeDetail: booking.purpose_detail || "",
+  });
+  const [localError, setLocalError] = useState("");
+  const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handleSave = () => {
+    setLocalError("");
+    if (form.endTime <= form.startTime) {
+      setLocalError("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น");
+      return;
+    }
+    onConfirm(form);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-lg">
+        <h3 className="text-sm font-semibold text-neutral-900 mb-3">แก้ไขคำขอจอง</h3>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-neutral-400 mb-1 block">วันที่ใช้ / คืน</label>
+            <input
+              type="date"
+              value={form.useDate}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, useDate: e.target.value, returnDate: e.target.value }))
+              }
+              className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-neutral-400 mb-1 block">เวลาเริ่ม</label>
+              <input
+                type="time"
+                value={form.startTime}
+                onChange={update("startTime")}
+                className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-neutral-400 mb-1 block">เวลาคืน</label>
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={update("endTime")}
+                className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-neutral-400 mb-1 block">วัตถุประสงค์</label>
+            <select
+              value={form.purpose}
+              onChange={update("purpose")}
+              className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="teaching">การเรียนการสอนในรายวิชา</option>
+              <option value="activity">กิจกรรม/งานภายในสาขาวิชา</option>
+              <option value="other">อื่นๆ</option>
+            </select>
+          </div>
+          {form.purpose === "other" && (
+            <input
+              placeholder="โปรดระบุ..."
+              value={form.purposeDetail}
+              onChange={update("purposeDetail")}
+              className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+            />
+          )}
+        </div>
+
+        {localError && (
+          <div className="mt-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+            {localError}
+          </div>
+        )}
+
+        <div className="flex gap-2 justify-end mt-4">
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            className="text-sm px-3 py-1.5 rounded-md text-neutral-600 hover:bg-neutral-100"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={busy}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-orange-600 hover:bg-orange-700 disabled:bg-orange-200 text-white font-medium"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            บันทึกการแก้ไข
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmDialog({ onCancel, onConfirm, busy }) {
+  return (
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-lg">
+        <h3 className="text-sm font-semibold text-neutral-900 mb-1">ลบคำขอจองนี้?</h3>
+        <p className="text-xs text-neutral-500 mb-4">
+          การลบไม่สามารถย้อนกลับได้ ข้อมูลห้อง/อุปกรณ์ที่ผูกกับคำขอนี้จะถูกลบไปด้วย
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            className="text-sm px-3 py-1.5 rounded-md text-neutral-600 hover:bg-neutral-100"
+          >
+            ยกเลิก
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 disabled:bg-red-200 text-white font-medium"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            ยืนยันลบ
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingCard({ booking, onApprove, onReject, onEdit, onDelete, busy }) {
   const [expanded, setExpanded] = useState(false);
   const [showReject, setShowReject] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const u = booking.users;
   const rooms = booking.booking_rooms.map((r) => r.rooms.name);
   const equipment = booking.booking_equipment;
@@ -96,7 +238,23 @@ function BookingCard({ booking, onApprove, onReject, busy }) {
               รหัสนิสิต {u?.student_id} · {u?.major} ชั้นปี {u?.year_level}
             </p>
           </div>
-          <StatusBadge status={booking.status} />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={booking.status} />
+            <button
+              onClick={() => setShowEdit(true)}
+              title="แก้ไข"
+              className="p-1.5 rounded-md text-neutral-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setShowDelete(true)}
+              title="ลบ"
+              className="p-1.5 rounded-md text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-neutral-600 mb-3">
@@ -177,6 +335,29 @@ function BookingCard({ booking, onApprove, onReject, busy }) {
           }}
         />
       )}
+
+      {showEdit && (
+        <EditDialog
+          booking={booking}
+          busy={busy}
+          onCancel={() => setShowEdit(false)}
+          onConfirm={async (form) => {
+            await onEdit(booking.id, form);
+            setShowEdit(false);
+          }}
+        />
+      )}
+
+      {showDelete && (
+        <DeleteConfirmDialog
+          busy={busy}
+          onCancel={() => setShowDelete(false)}
+          onConfirm={async () => {
+            await onDelete(booking.id);
+            setShowDelete(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -235,6 +416,42 @@ export default function ApprovalPage({ reviewerId = 1 }) {
     }
   };
 
+  const handleEdit = async (id, form) => {
+    setBusyId(id);
+    try {
+      await updateBookingDetails({
+        bookingId: id,
+        useDate: form.useDate,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        returnDate: form.returnDate,
+        purpose: form.purpose,
+        purposeDetail: form.purposeDetail,
+      });
+      setToast("แก้ไขคำขอเรียบร้อย");
+      await load(tab);
+    } catch (err) {
+      setError(err.message || "แก้ไขไม่สำเร็จ");
+    } finally {
+      setBusyId(null);
+      setTimeout(() => setToast(""), 2500);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    setBusyId(id);
+    try {
+      await deleteBooking(id);
+      setToast("ลบคำขอเรียบร้อย");
+      await load(tab);
+    } catch (err) {
+      setError(err.message || "ลบไม่สำเร็จ");
+    } finally {
+      setBusyId(null);
+      setTimeout(() => setToast(""), 2500);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAF8] py-10 px-4">
       <div className="max-w-3xl mx-auto">
@@ -281,6 +498,8 @@ export default function ApprovalPage({ reviewerId = 1 }) {
                 busy={busyId === b.id}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
               />
             ))}
           </div>

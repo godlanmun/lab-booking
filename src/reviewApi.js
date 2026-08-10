@@ -53,3 +53,54 @@ export async function reviewBooking({ bookingId, reviewerId, result, reason }) {
 
   if (error) throw error;
 }
+
+/**
+ * แก้ไขรายละเอียดคำขอจอง (วันเวลา/วัตถุประสงค์)
+ * เฉพาะอาจารย์/เจ้าหน้าที่เท่านั้นที่เรียกได้ (จำกัดสิทธิ์ไว้ที่หน้า ApprovalPage และ RLS policy)
+ * ทำได้กับคำขอทุกสถานะ (รวมที่อนุมัติไปแล้ว) เพื่อรองรับกรณีต้องแก้ไขภายหลัง
+ */
+export async function updateBookingDetails({
+  bookingId,
+  useDate,
+  startTime,
+  endTime,
+  returnDate,
+  purpose,
+  purposeDetail,
+}) {
+  if (endTime <= startTime) {
+    throw new Error("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น");
+  }
+  if (returnDate && returnDate !== useDate) {
+    throw new Error("ไม่อนุญาตให้ยืม/ใช้งานข้ามวัน กรุณาเลือกวันคืนเป็นวันเดียวกับวันที่ใช้");
+  }
+
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
+  const durationHours = (eh * 60 + em - (sh * 60 + sm)) / 60;
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      use_date: useDate,
+      start_time: startTime,
+      end_time: endTime,
+      return_date: returnDate || useDate,
+      return_time: endTime,
+      duration_hours: durationHours,
+      purpose,
+      purpose_detail: purposeDetail || null,
+    })
+    .eq("id", bookingId);
+
+  if (error) throw error;
+}
+
+/**
+ * ลบคำขอจองทิ้งทั้งรายการ (booking_rooms / booking_equipment ลบตามอัตโนมัติผ่าน CASCADE)
+ * เฉพาะอาจารย์/เจ้าหน้าที่เท่านั้น (บังคับที่ RLS policy ฝั่ง database ด้วย)
+ */
+export async function deleteBooking(bookingId) {
+  const { error } = await supabase.from("bookings").delete().eq("id", bookingId);
+  if (error) throw error;
+}
