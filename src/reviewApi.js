@@ -1,0 +1,55 @@
+import { supabase } from "./supabaseClient";
+
+/**
+ * ดึงรายการคำขอจองพร้อมข้อมูลผู้ขอใช้ + ห้อง + อุปกรณ์
+ * status: 'pending' | 'approved' | 'rejected' | ... หรือ 'all'
+ */
+export async function listBookings(status = "pending") {
+  let query = supabase
+    .from("bookings")
+    .select(
+      `id, purpose, purpose_detail, use_date, start_time, end_time,
+       return_date, return_time, duration_hours, status,
+       review_reason, reviewed_at, created_at,
+       users:user_id (prefix, full_name, student_id, phone, major, year_level),
+       booking_rooms ( rooms ( name ) ),
+       booking_equipment ( qty, equipment ( name ) )`
+    )
+    .order("use_date", { ascending: true })
+    .order("start_time", { ascending: true });
+
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * อนุมัติ / ไม่อนุมัติ คำขอจอง
+ * reviewerId: id ของอาจารย์ผู้พิจารณา (จากตาราง users, role = 'instructor')
+ */
+export async function reviewBooking({ bookingId, reviewerId, result, reason }) {
+  if (!["approved", "rejected"].includes(result)) {
+    throw new Error("ผลการพิจารณาต้องเป็น approved หรือ rejected เท่านั้น");
+  }
+  if (result === "rejected" && !reason) {
+    throw new Error("กรุณาระบุเหตุผลที่ไม่อนุมัติ");
+  }
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: result,
+      review_result: result,
+      review_reason: reason || null,
+      reviewed_by: reviewerId,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId)
+    .eq("status", "pending"); // กันการอนุมัติซ้ำ/แก้คำขอที่ถูกพิจารณาไปแล้ว
+
+  if (error) throw error;
+}
