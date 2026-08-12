@@ -8,7 +8,7 @@ export async function listReadyBookings(status = "approved") {
     .from("bookings")
     .select(
       `id, use_date, start_time, end_time, return_date, return_time, status, note,
-       checked_out_at, checked_in_at,
+       checked_out_at, checked_in_at, liability_agreed, id_verified,
        users:user_id (prefix, full_name, student_id, phone),
        booking_rooms ( rooms ( name ) ),
        booking_equipment ( id, qty, condition_out, condition_in, equipment ( name ) )`
@@ -23,15 +23,21 @@ export async function listReadyBookings(status = "approved") {
 
 /**
  * เจ้าหน้าที่ส่งมอบอุปกรณ์/ห้อง ให้ผู้ขอ (ยืม)
- * เปลี่ยนสถานะคำขอ approved -> borrowed พร้อมบันทึกผู้ส่งมอบ/เวลา
+ * บังคับให้เช็คบัตรนิสิตแล้วเท่านั้น (idVerified = true) ก่อนส่งมอบได้จริง
+ * เปลี่ยนสถานะคำขอ approved -> borrowed พร้อมบันทึกผู้ส่งมอบ/เวลา/ผลเช็คบัตร
  */
-export async function checkOutBooking({ bookingId, staffId }) {
+export async function checkOutBooking({ bookingId, staffId, idVerified }) {
+  if (!idVerified) {
+    throw new Error("กรุณาตรวจสอบบัตรนิสิตก่อนส่งมอบอุปกรณ์");
+  }
   const { error } = await supabase
     .from("bookings")
     .update({
       status: "borrowed",
       checked_out_by: staffId,
       checked_out_at: new Date().toISOString(),
+      id_verified: true,
+      id_verified_at: new Date().toISOString(),
     })
     .eq("id", bookingId)
     .eq("status", "approved"); // กันการส่งมอบซ้ำ

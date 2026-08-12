@@ -65,6 +65,7 @@ export default function BookingForm() {
     purposeDetail: "",
     equipmentOtherLeft: "",
     equipmentOtherRight: "",
+    liabilityAgreed: false,
     rooms: [],
     equipment: {},
     useDate: "",
@@ -114,6 +115,10 @@ export default function BookingForm() {
     // ตามระเบียบ: ยืม/ขอใช้ได้ในวัน ไม่อนุญาตให้ยืมข้ามวัน
     if (form.returnDate && form.returnDate !== form.useDate) {
       setError("ไม่อนุญาตให้ยืม/ใช้งานข้ามวัน กรุณาเลือกวันคืนเป็นวันเดียวกับวันที่ใช้");
+      return;
+    }
+    if (!form.liabilityAgreed) {
+      setError("กรุณายอมรับเงื่อนไขความรับผิดชอบต่ออุปกรณ์ก่อนส่งคำขอ");
       return;
     }
 
@@ -306,6 +311,23 @@ export default function BookingForm() {
             </div>
             <p className="text-xs text-neutral-400 mt-2">* ยืม/ขอใช้ได้ในวันและเวลาราชการ ไม่อนุญาตให้ยืมข้ามวัน</p>
           </Section>
+
+          {/* ข้อตกลงความรับผิดชอบ */}
+          <div className="mb-5 bg-amber-50 border border-amber-200 rounded-md p-4">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <span
+                onClick={() => setForm((f) => ({ ...f, liabilityAgreed: !f.liabilityAgreed }))}
+                className={`mt-0.5 w-5 h-5 shrink-0 flex items-center justify-center border rounded transition-colors
+                  ${form.liabilityAgreed ? "bg-orange-600 border-orange-600" : "border-neutral-300 bg-white"}`}
+              >
+                {form.liabilityAgreed && <CheckCircle2 className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+              </span>
+              <span className="text-xs text-neutral-700 leading-relaxed">
+                ข้าพเจ้าขอรับรองว่าจะดูแลอุปกรณ์เป็นอย่างดี เมื่อเสร็จสิ้นการใช้งานแล้ว หากเกิดการชำรุดเสียหายประการใด
+                ข้าพเจ้าจะเป็นผู้รับผิดชอบค่าใช้จ่ายในการซ่อมแซมอุปกรณ์ทั้งหมด และจะนำบัตรนิสิตมาแสดงตอนรับ-คืนอุปกรณ์ทุกครั้ง
+              </span>
+            </label>
+          </div>
 
           {error && (
             <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">

@@ -127,6 +127,7 @@ export async function createBooking(form, userId) {
       return_time: form.endTime,
       duration_hours: durationHours,
       status: "pending",
+      liability_agreed: !!form.liabilityAgreed,
     })
     .select("id")
     .single();

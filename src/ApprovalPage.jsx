@@ -10,6 +10,7 @@ import {
   DoorOpen,
   Pencil,
   Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import { listBookings, reviewBooking, updateBookingDetails, deleteBooking } from "./reviewApi";
 
@@ -270,6 +271,12 @@ function BookingCard({ booking, onApprove, onReject, onEdit, onDelete, busy }) {
             <span className="flex items-center gap-1.5">
               <Camera className="w-3.5 h-3.5 text-neutral-400" />
               {equipment.length} รายการ
+            </span>
+          )}
+          {booking.liability_agreed && (
+            <span className="flex items-center gap-1.5 text-emerald-600">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              ยอมรับเงื่อนไขความรับผิดชอบแล้ว
             </span>
           )}
         </div>

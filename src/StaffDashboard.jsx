@@ -9,6 +9,8 @@ import {
   ChevronUp,
   ArrowRightCircle,
   ArrowLeftCircle,
+  IdCard,
+  ShieldCheck,
 } from "lucide-react";
 import { listReadyBookings, checkOutBooking, checkInBooking, setEquipmentCondition } from "./staffApi";
 
@@ -41,6 +43,7 @@ function ConditionToggle({ value, onChange }) {
 
 function BookingRow({ booking, mode, onCheckOut, onCheckIn, busy }) {
   const [expanded, setExpanded] = useState(mode === "borrowed");
+  const [idChecked, setIdChecked] = useState(false);
   const [conditions, setConditions] = useState(() =>
     Object.fromEntries(booking.booking_equipment.map((e) => [e.id, e.condition_in || "ปกติ"]))
   );
@@ -86,6 +89,12 @@ function BookingRow({ booking, mode, onCheckOut, onCheckIn, busy }) {
             <DoorOpen className="w-3.5 h-3.5 text-neutral-400" />
             {rooms.join(", ") || "—"}
           </span>
+          {booking.liability_agreed && (
+            <span className="flex items-center gap-1.5 text-emerald-600">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              ยอมรับเงื่อนไขความรับผิดชอบแล้ว
+            </span>
+          )}
         </div>
 
         {equipment.length > 0 && (
@@ -118,6 +127,19 @@ function BookingRow({ booking, mode, onCheckOut, onCheckIn, busy }) {
           </div>
         )}
 
+        {mode === "approved" && (
+          <label className="flex items-center gap-2 mb-3 cursor-pointer select-none">
+            <span
+              onClick={() => setIdChecked((c) => !c)}
+              className={`w-5 h-5 flex items-center justify-center border rounded transition-colors
+                ${idChecked ? "bg-emerald-600 border-emerald-600" : "border-neutral-300"}`}
+            >
+              {idChecked && <IdCard className="w-3.5 h-3.5 text-white" />}
+            </span>
+            <span className="text-xs text-neutral-700">ตรวจสอบบัตรนิสิตของ {u?.prefix}{u?.full_name} แล้ว</span>
+          </label>
+        )}
+
         {mode === "borrowed" && (
           <textarea
             value={note}
@@ -130,12 +152,13 @@ function BookingRow({ booking, mode, onCheckOut, onCheckIn, busy }) {
 
         {mode === "approved" ? (
           <button
-            onClick={() => onCheckOut(booking.id)}
-            disabled={busy}
-            className="w-full flex items-center justify-center gap-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 disabled:bg-orange-200 text-white py-2 rounded-md transition-colors"
+            onClick={() => onCheckOut(booking.id, idChecked)}
+            disabled={busy || !idChecked}
+            title={!idChecked ? "กรุณาตรวจสอบบัตรนิสิตก่อน" : ""}
+            className="w-full flex items-center justify-center gap-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 disabled:bg-orange-200 disabled:cursor-not-allowed text-white py-2 rounded-md transition-colors"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightCircle className="w-4 h-4" />}
-            ส่งมอบ (ยืน)
+            ส่งมอบ (ยืม)
           </button>
         ) : (
           <button
@@ -186,10 +209,10 @@ export default function StaffDashboard({ staffId = 1 }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  const handleCheckOut = async (id) => {
+  const handleCheckOut = async (id, idVerified) => {
     setBusyId(id);
     try {
-      await checkOutBooking({ bookingId: id, staffId });
+      await checkOutBooking({ bookingId: id, staffId, idVerified });
       setToast("บันทึกการส่งมอบเรียบร้อย");
       await load(tab);
     } catch (err) {

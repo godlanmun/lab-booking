@@ -10,7 +10,7 @@ export async function listBookings(status = "pending") {
     .select(
       `id, purpose, purpose_detail, use_date, start_time, end_time,
        return_date, return_time, duration_hours, status,
-       review_reason, reviewed_at, created_at,
+       review_reason, reviewed_at, created_at, liability_agreed,
        users:user_id (prefix, full_name, student_id, phone, major, year_level),
        booking_rooms ( rooms ( name ) ),
        booking_equipment ( qty, equipment ( name ) )`
