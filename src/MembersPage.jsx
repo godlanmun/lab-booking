@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, ShieldOff, ShieldCheck, Users } from "lucide-react";
-import { listUsers, updateUserRole, setUserActive } from "./memberApi";
+import { Loader2, Search, ShieldOff, ShieldCheck, Users, Pencil, Check, X } from "lucide-react";
+import { listUsers, updateUserRole, setUserActive, updateUserPhone } from "./memberApi";
 import { useAuth } from "./AuthContext";
 
 const ROLE_LABEL = { student: "นิสิต", instructor: "อาจารย์", admin: "เจ้าหน้าที่" };
@@ -26,6 +26,8 @@ export default function MembersPage() {
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [toast, setToast] = useState("");
+  const [editingPhoneId, setEditingPhoneId] = useState(null);
+  const [phoneDraft, setPhoneDraft] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -49,7 +51,7 @@ export default function MembersPage() {
       if (tab !== "all" && u.role !== tab) return false;
       if (search.trim()) {
         const q = search.trim().toLowerCase();
-        const hay = `${u.full_name} ${u.student_id || ""} ${u.email || ""}`.toLowerCase();
+        const hay = `${u.full_name} ${u.student_id || ""} ${u.email || ""} ${u.phone || ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -78,6 +80,31 @@ export default function MembersPage() {
       await load();
     } catch (err) {
       setError(err.message || "ดำเนินการไม่สำเร็จ");
+    } finally {
+      setBusyId(null);
+      setTimeout(() => setToast(""), 2500);
+    }
+  };
+
+  const startEditPhone = (u) => {
+    setEditingPhoneId(u.id);
+    setPhoneDraft(u.phone || "");
+  };
+
+  const cancelEditPhone = () => {
+    setEditingPhoneId(null);
+    setPhoneDraft("");
+  };
+
+  const saveEditPhone = async (userId) => {
+    setBusyId(userId);
+    try {
+      await updateUserPhone(userId, phoneDraft.trim());
+      setToast("แก้ไขเบอร์โทรเรียบร้อย");
+      setEditingPhoneId(null);
+      await load();
+    } catch (err) {
+      setError(err.message || "แก้ไขไม่สำเร็จ");
     } finally {
       setBusyId(null);
       setTimeout(() => setToast(""), 2500);
@@ -155,6 +182,44 @@ export default function MembersPage() {
                       <p className="text-xs text-neutral-400">
                         {u.email} {u.student_id ? `· รหัสนิสิต ${u.student_id}` : ""} {u.major ? `· ${u.major}` : ""}
                       </p>
+                      <div className="text-xs text-neutral-400 mt-0.5 flex items-center gap-1.5">
+                        {editingPhoneId === u.id ? (
+                          <>
+                            <span>โทร:</span>
+                            <input
+                              autoFocus
+                              value={phoneDraft}
+                              onChange={(e) => setPhoneDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEditPhone(u.id);
+                                if (e.key === "Escape") cancelEditPhone();
+                              }}
+                              className="border border-neutral-300 rounded px-1.5 py-0.5 text-xs w-32"
+                            />
+                            <button
+                              onClick={() => saveEditPhone(u.id)}
+                              disabled={busyId === u.id}
+                              className="text-emerald-600 hover:text-emerald-700"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={cancelEditPhone} className="text-neutral-400 hover:text-neutral-600">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span>โทร: {u.phone || "—"}</span>
+                            <button
+                              onClick={() => startEditPhone(u)}
+                              title="แก้ไขเบอร์โทร"
+                              className="text-neutral-300 hover:text-orange-600"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2">

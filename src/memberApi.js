@@ -22,6 +22,14 @@ export async function updateUserRole(userId, role) {
 }
 
 /**
+ * แก้ไขเบอร์โทรของสมาชิก
+ */
+export async function updateUserPhone(userId, phone) {
+  const { error } = await supabase.from("users").update({ phone }).eq("id", userId);
+  if (error) throw error;
+}
+
+/**
  * เปิด/ระงับการใช้งานบัญชี (ไม่ใช่การลบถาวร — ปลอดภัยกว่าและย้อนกลับได้)
  */
 export async function setUserActive(userId, isActive) {

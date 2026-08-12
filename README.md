@@ -79,4 +79,3 @@ Push ขึ้น GitHub → Import เข้า Vercel → ใส่ Environmen
 - เปิด "Confirm email" ใน Supabase Auth settings ก่อนใช้งานจริง กันคนสมัครด้วยอีเมลปลอม
 - เพิ่มหน้า "ประวัติการจองของฉัน" ให้นิสิตดูสถานะคำขอตัวเอง
 - ถ้าอยากได้ Google/LINE login แทน email+password ในอนาคต ทำได้โดยเพิ่ม provider ใน Supabase Auth
-trigger redeploy
