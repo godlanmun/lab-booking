@@ -20,7 +20,7 @@ function TopNav() {
     { path: "/calendar", label: "ปฏิทินการจอง", icon: CalendarDays, roles: ["student", "instructor", "admin"] },
     { path: "/approve", label: "อนุมัติ", icon: ClipboardCheck, roles: ["instructor", "admin"] },
     { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck, roles: ["instructor", "admin"] },
-    { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3, roles: ["instructor"] },
+    { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3, roles: ["instructor", "admin"] },
   ].filter((item) => !profile || item.roles.includes(profile.role));
 
   const handleLogout = async () => {
@@ -115,7 +115,7 @@ function AppRoutes() {
         <Route
           path="/summary"
           element={
-            <ProtectedRoute allowedRoles={["instructor"]}>
+            <ProtectedRoute allowedRoles={["instructor", "admin"]}>
               <UsageSummary />
             </ProtectedRoute>
           }

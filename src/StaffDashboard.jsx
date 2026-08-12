@@ -9,7 +9,7 @@ import {
   ChevronUp,
   ArrowRightCircle,
   ArrowLeftCircle,
-  IdCard,
+  CreditCard,
   ShieldCheck,
 } from "lucide-react";
 import { listReadyBookings, checkOutBooking, checkInBooking, setEquipmentCondition } from "./staffApi";
@@ -134,7 +134,7 @@ function BookingRow({ booking, mode, onCheckOut, onCheckIn, busy }) {
               className={`w-5 h-5 flex items-center justify-center border rounded transition-colors
                 ${idChecked ? "bg-emerald-600 border-emerald-600" : "border-neutral-300"}`}
             >
-              {idChecked && <IdCard className="w-3.5 h-3.5 text-white" />}
+              {idChecked && <CreditCard className="w-3.5 h-3.5 text-white" />}
             </span>
             <span className="text-xs text-neutral-700">ตรวจสอบบัตรนิสิตของ {u?.prefix}{u?.full_name} แล้ว</span>
           </label>
