@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { CalendarPlus, ClipboardCheck, PackageCheck, CalendarDays, LogOut, BarChart3 } from "lucide-react";
+import { CalendarPlus, ClipboardCheck, PackageCheck, CalendarDays, LogOut, BarChart3, Users } from "lucide-react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
 import LoginPage from "./LoginPage";
@@ -8,6 +8,7 @@ import ApprovalPage from "./ApprovalPage.jsx";
 import StaffDashboard from "./StaffDashboard.jsx";
 import CalendarView from "./CalendarView.jsx";
 import UsageSummary from "./UsageSummary.jsx";
+import MembersPage from "./MembersPage.jsx";
 import { signOut } from "./authApi";
 
 function TopNav() {
@@ -21,6 +22,7 @@ function TopNav() {
     { path: "/approve", label: "อนุมัติ", icon: ClipboardCheck, roles: ["instructor", "admin"] },
     { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck, roles: ["instructor", "admin"] },
     { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3, roles: ["instructor", "admin"] },
+    { path: "/members", label: "จัดการสมาชิก", icon: Users, roles: ["instructor", "admin"] },
   ].filter((item) => !profile || item.roles.includes(profile.role));
 
   const handleLogout = async () => {
@@ -117,6 +119,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["instructor", "admin"]}>
               <UsageSummary />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/members"
+          element={
+            <ProtectedRoute allowedRoles={["instructor", "admin"]}>
+              <MembersPage />
             </ProtectedRoute>
           }
         />

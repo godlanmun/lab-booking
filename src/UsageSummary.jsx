@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, DoorOpen, Camera, ClipboardList } from "lucide-react";
+import { Loader2, DoorOpen, Camera, ClipboardList, ChevronDown, ChevronUp, ShieldCheck, CreditCard } from "lucide-react";
 import { getUsageSummary } from "./summaryApi";
 
 function toISODate(d) {
@@ -37,6 +37,7 @@ export default function UsageSummary() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -207,30 +208,112 @@ export default function UsageSummary() {
                 <p className="text-sm text-neutral-400">ไม่มีข้อมูลในช่วงที่เลือก</p>
               ) : (
                 <div className="space-y-2">
-                  {bookings.map((b) => (
-                    <div
-                      key={b.id}
-                      className="flex items-center justify-between text-sm border-b border-neutral-100 last:border-0 pb-2 last:pb-0"
-                    >
-                      <div>
-                        <span className="font-medium text-neutral-800">
-                          {b.users?.prefix}
-                          {b.users?.full_name}
-                        </span>
-                        <span className="text-neutral-400 ml-2">
-                          {b.use_date} · {b.start_time?.slice(0, 5)}–{b.end_time?.slice(0, 5)} น. ·{" "}
-                          {b.booking_rooms.map((r) => r.rooms.name).join(", ")}
-                        </span>
-                        <div className="text-xs text-neutral-400 mt-0.5">
-                          {PURPOSE_LABEL[b.purpose]}
-                          {b.purpose_detail ? ` — ${b.purpose_detail}` : ""}
-                        </div>
+                  {bookings.map((b) => {
+                    const isOpen = expandedId === b.id;
+                    return (
+                      <div key={b.id} className="border-b border-neutral-100 last:border-0 pb-2 last:pb-0">
+                        <button
+                          onClick={() => setExpandedId(isOpen ? null : b.id)}
+                          className="w-full flex items-center justify-between text-sm text-left"
+                        >
+                          <div>
+                            <span className="font-medium text-neutral-800">
+                              {b.users?.prefix}
+                              {b.users?.full_name}
+                            </span>
+                            <span className="text-neutral-400 ml-2">
+                              {b.use_date} · {b.start_time?.slice(0, 5)}–{b.end_time?.slice(0, 5)} น. ·{" "}
+                              {b.booking_rooms.map((r) => r.rooms.name).join(", ")}
+                            </span>
+                            <div className="text-xs text-neutral-400 mt-0.5">
+                              {PURPOSE_LABEL[b.purpose]}
+                              {b.purpose_detail ? ` — ${b.purpose_detail}` : ""}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 ml-3">
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_STYLE[b.status]}`}>
+                              {STATUS_LABEL[b.status]}
+                            </span>
+                            {isOpen ? (
+                              <ChevronUp className="w-4 h-4 text-neutral-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-neutral-400" />
+                            )}
+                          </div>
+                        </button>
+
+                        {isOpen && (
+                          <div className="mt-2 mb-1 bg-neutral-50 rounded-md p-3 text-xs text-neutral-600 space-y-2">
+                            <div className="flex flex-wrap gap-x-5 gap-y-1">
+                              <span>
+                                รหัสนิสิต/รหัสอาจารย์: <span className="font-medium">{b.users?.student_id || "—"}</span>
+                              </span>
+                              <span>
+                                ส่งมอบเมื่อ:{" "}
+                                <span className="font-medium">
+                                  {b.checked_out_at ? new Date(b.checked_out_at).toLocaleString("th-TH") : "ยังไม่ส่งมอบ"}
+                                </span>
+                              </span>
+                              <span>
+                                รับคืนเมื่อ:{" "}
+                                <span className="font-medium">
+                                  {b.checked_in_at ? new Date(b.checked_in_at).toLocaleString("th-TH") : "ยังไม่คืน"}
+                                </span>
+                              </span>
+                            </div>
+
+                            <div className="flex gap-4">
+                              {b.liability_agreed && (
+                                <span className="flex items-center gap-1 text-emerald-600">
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  ยอมรับเงื่อนไขความรับผิดชอบแล้ว
+                                </span>
+                              )}
+                              {b.id_verified && (
+                                <span className="flex items-center gap-1 text-emerald-600">
+                                  <CreditCard className="w-3.5 h-3.5" />
+                                  ตรวจสอบบัตรนิสิตแล้ว
+                                </span>
+                              )}
+                            </div>
+
+                            {b.booking_equipment.length > 0 && (
+                              <div>
+                                <p className="font-medium text-neutral-700 mb-1">รายการอุปกรณ์ที่ยืม</p>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {b.booking_equipment.map((be, i) => (
+                                    <div key={i} className="flex items-center justify-between bg-white rounded px-2 py-1">
+                                      <span>
+                                        {be.equipment.name} × {be.qty}
+                                      </span>
+                                      {be.condition_in && (
+                                        <span
+                                          className={
+                                            be.condition_in === "ปกติ"
+                                              ? "text-emerald-600"
+                                              : "text-red-600 font-medium"
+                                          }
+                                        >
+                                          {be.condition_in}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {b.note && (
+                              <div>
+                                <p className="font-medium text-neutral-700 mb-1">หมายเหตุการรับคืน</p>
+                                <p className="bg-white rounded px-2 py-1">{b.note}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ml-3 ${STATUS_STYLE[b.status]}`}>
-                        {STATUS_LABEL[b.status]}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
