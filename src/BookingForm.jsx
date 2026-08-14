@@ -5,23 +5,48 @@ import { useAuth } from "./AuthContext";
 
 const ROOMS = ["Production Studio", "Control Room", "Sound Recording Room", "Computer (Mac PC)"];
 
-const EQUIPMENT_LEFT = [
-  { key: "กล้อง", label: "กล้อง" },
-  { key: "เลนส์", label: "เลนส์" },
-  { key: "แบตเตอรี่", label: "แบตเตอรี่" },
-  { key: "Memory", label: "Memory" },
-  { key: "ขาตั้งกล้อง", label: "ขาตั้งกล้อง" },
-  { key: "สายสัญญาณ", label: "สายสัญญาณ" },
-  { key: "equipment_other_left", label: "อื่นๆ" },
-];
-const EQUIPMENT_RIGHT = [
-  { key: "กระเป๋า", label: "กระเป๋า" },
-  { key: "ฟิวเตอร์เลนส์", label: "ฟิวเตอร์เลนส์" },
-  { key: "ที่ชาร์จแบต", label: "ที่ชาร์จแบต" },
-  { key: "ไมค์", label: "ไมค์" },
-  { key: "สายไฟ", label: "สายไฟ" },
-  { key: "ราง Dolly", label: "ราง Dolly" },
-  { key: "equipment_other_right", label: "อื่นๆ" },
+const EQUIPMENT_CATEGORIES = [
+  {
+    name: "กล้อง",
+    items: [
+      { key: "กล้อง Panasonic", label: "กล้อง Panasonic" },
+      { key: "กล้อง Canon DSLR EOS80D", label: "กล้อง Canon DSLR EOS80D" },
+      { key: "กล้อง Sony Mirrorless ZV-E10", label: "กล้อง Sony Mirrorless ZV-E10" },
+    ],
+  },
+  {
+    name: "เลนส์และอุปกรณ์เสริมกล้อง",
+    items: [
+      { key: "เลนส์", label: "เลนส์" },
+      { key: "ฟิวเตอร์เลนส์", label: "ฟิวเตอร์เลนส์" },
+      { key: "ขาตั้งกล้อง", label: "ขาตั้งกล้อง" },
+      { key: "ราง Dolly", label: "ราง Dolly" },
+    ],
+  },
+  {
+    name: "เสียง",
+    items: [
+      { key: "ไมค์", label: "ไมค์" },
+      { key: "ไมโครโฟน Saramonic", label: "ไมโครโฟน Saramonic" },
+    ],
+  },
+  {
+    name: "พลังงานและสายสัญญาณ",
+    items: [
+      { key: "แบตเตอรี่", label: "แบตเตอรี่" },
+      { key: "ที่ชาร์จแบต", label: "ที่ชาร์จแบต" },
+      { key: "สายไฟ", label: "สายไฟ" },
+      { key: "สายสัญญาณ", label: "สายสัญญาณ" },
+      { key: "Memory", label: "Memory" },
+    ],
+  },
+  {
+    name: "อื่นๆ",
+    items: [
+      { key: "กระเป๋า", label: "กระเป๋า" },
+      { key: "equipment_other", label: "อื่นๆ (โปรดระบุ)" },
+    ],
+  },
 ];
 
 const PURPOSES = [
@@ -93,8 +118,7 @@ export default function BookingForm() {
   const [form, setForm] = useState({
     purpose: "teaching",
     purposeDetail: "",
-    equipmentOtherLeft: "",
-    equipmentOtherRight: "",
+    equipmentOtherNote: "",
     liabilityAgreed: false,
     rooms: [],
     otherRoom: false,
@@ -170,16 +194,13 @@ export default function BookingForm() {
 
     // รวมข้อความ "อุปกรณ์อื่นๆ" (ถ้ามี) เข้าไปในวัตถุประสงค์ที่บันทึกจริง
     // เพราะ schema เดิมยังไม่มีคอลัมน์แยกสำหรับอุปกรณ์กำหนดเอง
-    const otherEquipmentNotes = [];
-    if (form.equipment.equipment_other_left && form.equipmentOtherLeft.trim()) {
-      otherEquipmentNotes.push(form.equipmentOtherLeft.trim());
-    }
-    if (form.equipment.equipment_other_right && form.equipmentOtherRight.trim()) {
-      otherEquipmentNotes.push(form.equipmentOtherRight.trim());
-    }
+    const otherEquipmentNote =
+      form.equipment.equipment_other && form.equipmentOtherNote.trim()
+        ? form.equipmentOtherNote.trim()
+        : null;
     const combinedPurposeDetail = [
       form.purposeDetail.trim() || null,
-      otherEquipmentNotes.length ? `อุปกรณ์อื่นๆ: ${otherEquipmentNotes.join(", ")}` : null,
+      otherEquipmentNote ? `อุปกรณ์อื่นๆ: ${otherEquipmentNote}` : null,
       form.otherRoom && form.otherRoomNote.trim() ? `สถานที่อื่นๆ: ${form.otherRoomNote.trim()}` : null,
     ]
       .filter(Boolean)
@@ -307,57 +328,39 @@ export default function BookingForm() {
 
           {/* อุปกรณ์ */}
           <Section number="04" title="อุปกรณ์ที่ต้องการยืม">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-              <div className="space-y-3">
-                {EQUIPMENT_LEFT.map((item) => (
-                  <div key={item.key}>
-                    <Checkbox
-                      label={item.label}
-                      checked={!!form.equipment[item.key]}
-                      onChange={() => toggleEquipment(item.key)}
-                    />
-                    {!!form.equipment[item.key] && (
-                      <QtyStepper
-                        value={form.equipment[item.key]}
-                        onChange={(v) => setEquipmentQty(item.key, v)}
-                      />
-                    )}
-                    {item.key === "equipment_other_left" && form.equipment[item.key] && (
-                      <input
-                        placeholder="ระบุอุปกรณ์อื่นๆ..."
-                        value={form.equipmentOtherLeft}
-                        onChange={update("equipmentOtherLeft")}
-                        className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
-                      />
-                    )}
+            <div className="space-y-5">
+              {EQUIPMENT_CATEGORIES.map((cat) => (
+                <div key={cat.name}>
+                  <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
+                    {cat.name}
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    {cat.items.map((item) => (
+                      <div key={item.key}>
+                        <Checkbox
+                          label={item.label}
+                          checked={!!form.equipment[item.key]}
+                          onChange={() => toggleEquipment(item.key)}
+                        />
+                        {!!form.equipment[item.key] && (
+                          <QtyStepper
+                            value={form.equipment[item.key]}
+                            onChange={(v) => setEquipmentQty(item.key, v)}
+                          />
+                        )}
+                        {item.key === "equipment_other" && form.equipment[item.key] && (
+                          <input
+                            placeholder="ระบุอุปกรณ์อื่นๆ..."
+                            value={form.equipmentOtherNote}
+                            onChange={update("equipmentOtherNote")}
+                            className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
+                          />
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="space-y-3">
-                {EQUIPMENT_RIGHT.map((item) => (
-                  <div key={item.key}>
-                    <Checkbox
-                      label={item.label}
-                      checked={!!form.equipment[item.key]}
-                      onChange={() => toggleEquipment(item.key)}
-                    />
-                    {!!form.equipment[item.key] && (
-                      <QtyStepper
-                        value={form.equipment[item.key]}
-                        onChange={(v) => setEquipmentQty(item.key, v)}
-                      />
-                    )}
-                    {item.key === "equipment_other_right" && form.equipment[item.key] && (
-                      <input
-                        placeholder="ระบุอุปกรณ์อื่นๆ..."
-                        value={form.equipmentOtherRight}
-                        onChange={update("equipmentOtherRight")}
-                        className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </Section>
 

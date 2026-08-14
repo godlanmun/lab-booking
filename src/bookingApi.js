@@ -88,12 +88,10 @@ export async function createBooking(form, userId) {
 
   const roomIds = await getIdsByNames("rooms", form.rooms);
 
-  // form.equipment: { equipmentName: qty } — ไม่รวม key สังเคราะห์ "equipment_other_left/right"
+  // form.equipment: { equipmentName: qty } — ไม่รวม key สังเคราะห์ "equipment_other"
   // เพราะไม่ใช่รายการที่มีอยู่จริงในตาราง equipment (บันทึกเป็นข้อความใน purpose_detail แทน)
   const equipmentQtyMap = Object.fromEntries(
-    Object.entries(form.equipment).filter(
-      ([key, qty]) => qty > 0 && key !== "equipment_other_left" && key !== "equipment_other_right"
-    )
+    Object.entries(form.equipment).filter(([key, qty]) => qty > 0 && key !== "equipment_other")
   );
   const equipmentNames = Object.keys(equipmentQtyMap);
 
