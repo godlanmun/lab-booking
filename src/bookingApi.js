@@ -38,9 +38,11 @@ export async function checkRoomConflicts({ roomIds, useDate, startTime, endTime 
 
 /**
  * เช็คว่าอุปกรณ์ที่เลือกมีจำนวนพอให้ยืมในช่วงเวลาที่ขอหรือไม่
+ * equipmentQtyMap: { equipmentName: requestedQty }
  * คืนค่า array ของ { name, requested, available } สำหรับรายการที่ไม่พอ
  */
-export async function checkEquipmentAvailability({ equipmentNames, useDate, startTime, endTime }) {
+export async function checkEquipmentAvailability({ equipmentQtyMap, useDate, startTime, endTime }) {
+  const equipmentNames = Object.keys(equipmentQtyMap);
   if (equipmentNames.length === 0) return [];
 
   const { data: equipmentRows, error: eqErr } = await supabase
@@ -52,6 +54,8 @@ export async function checkEquipmentAvailability({ equipmentNames, useDate, star
   const shortages = [];
 
   for (const eq of equipmentRows) {
+    const requested = equipmentQtyMap[eq.name] || 1;
+
     const { data: overlapping, error } = await supabase
       .from("booking_equipment")
       .select(`qty, bookings!inner(use_date, start_time, end_time, status)`)
@@ -66,8 +70,8 @@ export async function checkEquipmentAvailability({ equipmentNames, useDate, star
       .reduce((sum, row) => sum + row.qty, 0);
 
     const available = eq.total_qty - alreadyBooked;
-    if (available < 1) {
-      shortages.push({ name: eq.name, requested: 1, available: Math.max(available, 0) });
+    if (available < requested) {
+      shortages.push({ name: eq.name, requested, available: Math.max(available, 0) });
     }
   }
 
@@ -83,7 +87,15 @@ export async function createBooking(form, userId) {
   if (!userId) throw new Error("กรุณาเข้าสู่ระบบก่อนทำการจอง");
 
   const roomIds = await getIdsByNames("rooms", form.rooms);
-  const equipmentNames = Object.keys(form.equipment).filter((k) => form.equipment[k]);
+
+  // form.equipment: { equipmentName: qty } — ไม่รวม key สังเคราะห์ "equipment_other_left/right"
+  // เพราะไม่ใช่รายการที่มีอยู่จริงในตาราง equipment (บันทึกเป็นข้อความใน purpose_detail แทน)
+  const equipmentQtyMap = Object.fromEntries(
+    Object.entries(form.equipment).filter(
+      ([key, qty]) => qty > 0 && key !== "equipment_other_left" && key !== "equipment_other_right"
+    )
+  );
+  const equipmentNames = Object.keys(equipmentQtyMap);
 
   // 1. เช็คห้องว่าง
   const roomConflicts = await checkRoomConflicts({
@@ -96,15 +108,17 @@ export async function createBooking(form, userId) {
     throw new Error(`ห้องต่อไปนี้ถูกจองแล้วในช่วงเวลาที่เลือก: ${roomConflicts.join(", ")}`);
   }
 
-  // 2. เช็คอุปกรณ์พอไหม
+  // 2. เช็คอุปกรณ์พอไหม (เทียบตามจำนวนที่ขอจริง)
   const shortages = await checkEquipmentAvailability({
-    equipmentNames,
+    equipmentQtyMap,
     useDate: form.useDate,
     startTime: form.startTime,
     endTime: form.endTime,
   });
   if (shortages.length > 0) {
-    const msg = shortages.map((s) => `${s.name} (เหลือ ${s.available})`).join(", ");
+    const msg = shortages
+      .map((s) => `${s.name} (ขอ ${s.requested} เหลือ ${s.available})`)
+      .join(", ");
     throw new Error(`อุปกรณ์ไม่พอในช่วงเวลาที่เลือก: ${msg}`);
   }
 
@@ -142,12 +156,21 @@ export async function createBooking(form, userId) {
     if (roomErr) throw roomErr;
   }
 
-  // 6. ผูกอุปกรณ์ที่เลือก
+  // 6. ผูกอุปกรณ์ที่เลือก พร้อมจำนวนที่ขอจริง
   if (equipmentNames.length > 0) {
-    const equipmentIds = await getIdsByNames("equipment", equipmentNames);
-    const { error: eqErr } = await supabase
-      .from("booking_equipment")
-      .insert(equipmentIds.map((equipment_id) => ({ booking_id: booking.id, equipment_id, qty: 1 })));
+    const { data: equipmentRows, error: lookupErr } = await supabase
+      .from("equipment")
+      .select("id, name")
+      .in("name", equipmentNames);
+    if (lookupErr) throw lookupErr;
+
+    const { error: eqErr } = await supabase.from("booking_equipment").insert(
+      equipmentRows.map((row) => ({
+        booking_id: booking.id,
+        equipment_id: row.id,
+        qty: equipmentQtyMap[row.name] || 1,
+      }))
+    );
     if (eqErr) throw eqErr;
   }
 

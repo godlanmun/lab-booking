@@ -58,6 +58,36 @@ function Checkbox({ checked, onChange, label }) {
   );
 }
 
+function QtyStepper({ value, onChange }) {
+  return (
+    <div className="flex items-center gap-1.5 ml-7 mt-1">
+      <button
+        type="button"
+        onClick={() => onChange(value - 1)}
+        className="w-6 h-6 flex items-center justify-center rounded border border-neutral-300 text-neutral-500 hover:bg-neutral-100 text-sm leading-none"
+      >
+        −
+      </button>
+      <input
+        type="number"
+        min={1}
+        max={99}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-12 text-center border border-neutral-300 rounded px-1 py-0.5 text-sm"
+      />
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        className="w-6 h-6 flex items-center justify-center rounded border border-neutral-300 text-neutral-500 hover:bg-neutral-100 text-sm leading-none"
+      >
+        +
+      </button>
+      <span className="text-xs text-neutral-400">ชิ้น</span>
+    </div>
+  );
+}
+
 export default function BookingForm() {
   const { profile } = useAuth();
   const [form, setForm] = useState({
@@ -67,6 +97,8 @@ export default function BookingForm() {
     equipmentOtherRight: "",
     liabilityAgreed: false,
     rooms: [],
+    otherRoom: false,
+    otherRoomNote: "",
     equipment: {},
     useDate: "",
     startTime: "",
@@ -86,10 +118,20 @@ export default function BookingForm() {
   };
 
   const toggleEquipment = (item) => {
-    setForm((f) => ({
-      ...f,
-      equipment: { ...f.equipment, [item]: !f.equipment[item] },
-    }));
+    setForm((f) => {
+      const nextEquipment = { ...f.equipment };
+      if (nextEquipment[item]) {
+        delete nextEquipment[item]; // ยกเลิกติ๊ก -> เอาออกทั้งหมด
+      } else {
+        nextEquipment[item] = 1; // ติ๊กใหม่ -> เริ่มที่จำนวน 1
+      }
+      return { ...f, equipment: nextEquipment };
+    });
+  };
+
+  const setEquipmentQty = (item, qty) => {
+    const n = Math.max(1, Math.min(99, Number(qty) || 1));
+    setForm((f) => ({ ...f, equipment: { ...f.equipment, [item]: n } }));
   };
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -100,8 +142,12 @@ export default function BookingForm() {
       setError("กรุณาระบุชื่อรายวิชา");
       return;
     }
-    if (form.rooms.length === 0) {
-      setError("กรุณาเลือกห้อง Lab อย่างน้อย 1 ห้อง");
+    if (form.rooms.length === 0 && !form.otherRoom) {
+      setError("กรุณาเลือกห้อง Lab หรือระบุสถานที่ใช้งานอื่นๆ อย่างน้อย 1 รายการ");
+      return;
+    }
+    if (form.otherRoom && !form.otherRoomNote.trim()) {
+      setError("กรุณาระบุรายละเอียดสถานที่ใช้งานอื่นๆ");
       return;
     }
     if (!form.useDate || !form.startTime || !form.endTime) {
@@ -134,6 +180,7 @@ export default function BookingForm() {
     const combinedPurposeDetail = [
       form.purposeDetail.trim() || null,
       otherEquipmentNotes.length ? `อุปกรณ์อื่นๆ: ${otherEquipmentNotes.join(", ")}` : null,
+      form.otherRoom && form.otherRoomNote.trim() ? `สถานที่อื่นๆ: ${form.otherRoomNote.trim()}` : null,
     ]
       .filter(Boolean)
       .join(" | ");
@@ -240,6 +287,21 @@ export default function BookingForm() {
               {ROOMS.map((room) => (
                 <Checkbox key={room} label={room} checked={form.rooms.includes(room)} onChange={() => toggleRoom(room)} />
               ))}
+              <div>
+                <Checkbox
+                  label="อื่นๆ"
+                  checked={form.otherRoom}
+                  onChange={() => setForm((f) => ({ ...f, otherRoom: !f.otherRoom }))}
+                />
+                {form.otherRoom && (
+                  <input
+                    placeholder="เช่น ใช้งานนอกสถานที่..."
+                    value={form.otherRoomNote}
+                    onChange={update("otherRoomNote")}
+                    className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
+                  />
+                )}
+              </div>
             </div>
           </Section>
 
@@ -254,12 +316,18 @@ export default function BookingForm() {
                       checked={!!form.equipment[item.key]}
                       onChange={() => toggleEquipment(item.key)}
                     />
+                    {!!form.equipment[item.key] && (
+                      <QtyStepper
+                        value={form.equipment[item.key]}
+                        onChange={(v) => setEquipmentQty(item.key, v)}
+                      />
+                    )}
                     {item.key === "equipment_other_left" && form.equipment[item.key] && (
                       <input
                         placeholder="ระบุอุปกรณ์อื่นๆ..."
                         value={form.equipmentOtherLeft}
                         onChange={update("equipmentOtherLeft")}
-                        className="mt-1.5 w-full border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
+                        className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
                       />
                     )}
                   </div>
@@ -273,12 +341,18 @@ export default function BookingForm() {
                       checked={!!form.equipment[item.key]}
                       onChange={() => toggleEquipment(item.key)}
                     />
+                    {!!form.equipment[item.key] && (
+                      <QtyStepper
+                        value={form.equipment[item.key]}
+                        onChange={(v) => setEquipmentQty(item.key, v)}
+                      />
+                    )}
                     {item.key === "equipment_other_right" && form.equipment[item.key] && (
                       <input
                         placeholder="ระบุอุปกรณ์อื่นๆ..."
                         value={form.equipmentOtherRight}
                         onChange={update("equipmentOtherRight")}
-                        className="mt-1.5 w-full border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
+                        className="mt-1.5 ml-7 w-[calc(100%-1.75rem)] border border-neutral-300 rounded-md px-3 py-1.5 text-sm"
                       />
                     )}
                   </div>
