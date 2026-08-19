@@ -85,6 +85,49 @@ export default function CalendarView() {
     return map;
   }, [bookings, roomFilter]);
 
+  // เดินคำนวณ "ห้องที่ถูกจองแล้ว" ต่อวัน ครอบคลุมทุกวันในช่วงที่จอง (ไม่ใช่แค่วันเริ่ม)
+  // เพื่อเทียบกับจำนวนห้องทั้งหมด (หรือห้องที่กรองไว้) แล้วสรุปสถานะ ว่าง/บางส่วน/เต็ม
+  const occupiedRoomsByDate = useMemo(() => {
+    const map = {}; // { iso: Set(roomId) }
+    for (const b of bookings) {
+      if (!["pending", "approved", "borrowed"].includes(b.status)) continue;
+      const roomsInBooking = b.booking_rooms.map((r) => r.rooms);
+      const relevantRooms =
+        roomFilter === "all" ? roomsInBooking : roomsInBooking.filter((r) => String(r.id) === roomFilter);
+      if (relevantRooms.length === 0) continue;
+
+      const start = new Date(b.use_date + "T00:00:00");
+      const end = new Date((b.return_date || b.use_date) + "T00:00:00");
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const iso = toISODate(d);
+        if (!map[iso]) map[iso] = new Set();
+        relevantRooms.forEach((r) => map[iso].add(r.id));
+      }
+    }
+    return map;
+  }, [bookings, roomFilter]);
+
+  const totalRelevantRooms = roomFilter === "all" ? rooms.length : 1;
+
+  function getDayAvailability(iso) {
+    const occupiedCount = occupiedRoomsByDate[iso]?.size || 0;
+    if (occupiedCount === 0) return "free";
+    if (totalRelevantRooms > 0 && occupiedCount >= totalRelevantRooms) return "full";
+    return "partial";
+  }
+
+  const AVAILABILITY_RING = {
+    free: "ring-1 ring-emerald-300",
+    partial: "ring-1 ring-amber-300",
+    full: "ring-1 ring-red-300",
+  };
+  const AVAILABILITY_DOT = {
+    free: "bg-emerald-500",
+    partial: "bg-amber-500",
+    full: "bg-red-500",
+  };
+  const AVAILABILITY_LABEL = { free: "ห้องว่าง", partial: "ว่างบางห้อง", full: "เต็มทุกห้อง" };
+
   const selectedBookings = selectedDay ? bookingsByDate[selectedDay] || [] : [];
 
   return (
@@ -128,7 +171,14 @@ export default function CalendarView() {
           </select>
         </div>
 
-        <div className="flex gap-3 mb-3 text-xs text-neutral-500">
+        <div className="flex gap-3 mb-3 text-xs text-neutral-500 flex-wrap">
+          {Object.entries(AVAILABILITY_LABEL).map(([k, label]) => (
+            <span key={k} className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-full ${AVAILABILITY_DOT[k]}`} />
+              {label}
+            </span>
+          ))}
+          <span className="text-neutral-300">|</span>
           {Object.entries(STATUS_LABEL).map(([k, label]) => (
             <span key={k} className="flex items-center gap-1.5">
               <span className={`w-2.5 h-2.5 rounded-sm border ${STATUS_STYLE[k]}`} />
@@ -162,6 +212,7 @@ export default function CalendarView() {
               const iso = toISODate(date);
               const dayBookings = bookingsByDate[iso] || [];
               const isToday = iso === toISODate(today);
+              const availability = getDayAvailability(iso);
               return (
                 <button
                   key={i}
@@ -170,13 +221,19 @@ export default function CalendarView() {
                     selectedDay === iso ? "bg-orange-50" : ""
                   }`}
                 >
-                  <span
-                    className={`text-xs inline-flex items-center justify-center w-5 h-5 rounded-full ${
-                      isToday ? "bg-orange-600 text-white" : "text-neutral-600"
-                    }`}
-                  >
-                    {date.getDate()}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`text-xs inline-flex items-center justify-center w-5 h-5 rounded-full ${
+                        isToday ? "bg-orange-600 text-white" : `text-neutral-600 ${AVAILABILITY_RING[availability]}`
+                      }`}
+                    >
+                      {date.getDate()}
+                    </span>
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${AVAILABILITY_DOT[availability]}`}
+                      title={AVAILABILITY_LABEL[availability]}
+                    />
+                  </div>
                   <div className="mt-1 space-y-0.5">
                     {dayBookings.slice(0, 3).map((b) => (
                       <div

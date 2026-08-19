@@ -11,19 +11,23 @@ async function getIdsByNames(table, names) {
 }
 
 /**
- * เช็คว่าห้องที่เลือก "ว่าง" ในช่วงเวลาที่ขอหรือไม่
+ * เช็คว่าห้องที่เลือก "ว่าง" ในช่วงเวลาที่ขอหรือไม่ (รองรับจองหลายวัน)
+ * เทียบช่วงวันที่ทับซ้อนกัน (existing.use_date <= newReturnDate AND existing.return_date >= newUseDate)
+ * แล้วค่อยเช็คช่วงเวลาในแต่ละวันทับซ้อนกันด้วย
  * คืนค่า array ของชื่อห้องที่ชนกับคำขออื่นที่ pending/approved/borrowed อยู่แล้ว
  */
-export async function checkRoomConflicts({ roomIds, useDate, startTime, endTime }) {
+export async function checkRoomConflicts({ roomIds, useDate, returnDate, startTime, endTime }) {
   if (roomIds.length === 0) return [];
+  const rDate = returnDate || useDate;
 
   const { data, error } = await supabase
     .from("booking_rooms")
     .select(
-      `room_id, rooms(name), bookings!inner(use_date, start_time, end_time, status)`
+      `room_id, rooms(name), bookings!inner(use_date, return_date, start_time, end_time, status)`
     )
     .in("room_id", roomIds)
-    .eq("bookings.use_date", useDate)
+    .lte("bookings.use_date", rDate)
+    .gte("bookings.return_date", useDate)
     .in("bookings.status", ["pending", "approved", "borrowed"]);
 
   if (error) throw error;
@@ -37,13 +41,14 @@ export async function checkRoomConflicts({ roomIds, useDate, startTime, endTime 
 }
 
 /**
- * เช็คว่าอุปกรณ์ที่เลือกมีจำนวนพอให้ยืมในช่วงเวลาที่ขอหรือไม่
+ * เช็คว่าอุปกรณ์ที่เลือกมีจำนวนพอให้ยืมในช่วงเวลาที่ขอหรือไม่ (รองรับจองหลายวัน)
  * equipmentQtyMap: { equipmentName: requestedQty }
  * คืนค่า array ของ { name, requested, available } สำหรับรายการที่ไม่พอ
  */
-export async function checkEquipmentAvailability({ equipmentQtyMap, useDate, startTime, endTime }) {
+export async function checkEquipmentAvailability({ equipmentQtyMap, useDate, returnDate, startTime, endTime }) {
   const equipmentNames = Object.keys(equipmentQtyMap);
   if (equipmentNames.length === 0) return [];
+  const rDate = returnDate || useDate;
 
   const { data: equipmentRows, error: eqErr } = await supabase
     .from("equipment")
@@ -58,9 +63,10 @@ export async function checkEquipmentAvailability({ equipmentQtyMap, useDate, sta
 
     const { data: overlapping, error } = await supabase
       .from("booking_equipment")
-      .select(`qty, bookings!inner(use_date, start_time, end_time, status)`)
+      .select(`qty, bookings!inner(use_date, return_date, start_time, end_time, status)`)
       .eq("equipment_id", eq.id)
-      .eq("bookings.use_date", useDate)
+      .lte("bookings.use_date", rDate)
+      .gte("bookings.return_date", useDate)
       .in("bookings.status", ["pending", "approved", "borrowed"]);
 
     if (error) throw error;
@@ -99,6 +105,7 @@ export async function createBooking(form, userId) {
   const roomConflicts = await checkRoomConflicts({
     roomIds,
     useDate: form.useDate,
+    returnDate: form.returnDate,
     startTime: form.startTime,
     endTime: form.endTime,
   });
@@ -110,6 +117,7 @@ export async function createBooking(form, userId) {
   const shortages = await checkEquipmentAvailability({
     equipmentQtyMap,
     useDate: form.useDate,
+    returnDate: form.returnDate,
     startTime: form.startTime,
     endTime: form.endTime,
   });

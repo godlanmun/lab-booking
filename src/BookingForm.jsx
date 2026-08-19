@@ -133,6 +133,7 @@ export default function BookingForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showMultiDayWarning, setShowMultiDayWarning] = useState(false);
 
   const toggleRoom = (room) => {
     setForm((f) => ({
@@ -160,38 +161,35 @@ export default function BookingForm() {
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const handleSubmit = async () => {
-    setError("");
+  const hasEquipmentSelected = Object.entries(form.equipment).some(([, qty]) => qty > 0);
+  const isMultiDay = form.useDate && form.returnDate && form.returnDate !== form.useDate;
+
+  const validate = () => {
     if (form.purpose === "teaching" && !form.purposeDetail.trim()) {
-      setError("กรุณาระบุชื่อรายวิชา");
-      return;
+      return "กรุณาระบุชื่อรายวิชา";
     }
     if (form.rooms.length === 0 && !form.otherRoom) {
-      setError("กรุณาเลือกห้อง Lab หรือระบุสถานที่ใช้งานอื่นๆ อย่างน้อย 1 รายการ");
-      return;
+      return "กรุณาเลือกห้อง Lab หรือระบุสถานที่ใช้งานอื่นๆ อย่างน้อย 1 รายการ";
     }
     if (form.otherRoom && !form.otherRoomNote.trim()) {
-      setError("กรุณาระบุรายละเอียดสถานที่ใช้งานอื่นๆ");
-      return;
+      return "กรุณาระบุรายละเอียดสถานที่ใช้งานอื่นๆ";
     }
     if (!form.useDate || !form.startTime || !form.endTime) {
-      setError("กรุณาระบุวันและเวลาที่ต้องการใช้งาน");
-      return;
+      return "กรุณาระบุวันและเวลาที่ต้องการใช้งาน";
     }
     if (form.endTime <= form.startTime) {
-      setError("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น");
-      return;
+      return "เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น";
     }
-    // ตามระเบียบ: ยืม/ขอใช้ได้ในวัน ไม่อนุญาตให้ยืมข้ามวัน
-    if (form.returnDate && form.returnDate !== form.useDate) {
-      setError("ไม่อนุญาตให้ยืม/ใช้งานข้ามวัน กรุณาเลือกวันคืนเป็นวันเดียวกับวันที่ใช้");
-      return;
+    if (form.returnDate && form.returnDate < form.useDate) {
+      return "วันที่คืนต้องอยู่หลังหรือเท่ากับวันที่เริ่มใช้งาน";
     }
     if (!form.liabilityAgreed) {
-      setError("กรุณายอมรับเงื่อนไขความรับผิดชอบต่ออุปกรณ์ก่อนส่งคำขอ");
-      return;
+      return "กรุณายอมรับเงื่อนไขความรับผิดชอบต่ออุปกรณ์ก่อนส่งคำขอ";
     }
+    return "";
+  };
 
+  const performSubmit = async () => {
     // รวมข้อความ "อุปกรณ์อื่นๆ" (ถ้ามี) เข้าไปในวัตถุประสงค์ที่บันทึกจริง
     // เพราะ schema เดิมยังไม่มีคอลัมน์แยกสำหรับอุปกรณ์กำหนดเอง
     const otherEquipmentNote =
@@ -215,7 +213,28 @@ export default function BookingForm() {
     } finally {
       setLoading(false);
     }
+  };
 
+  const handleSubmit = async () => {
+    setError("");
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    // ยืมอุปกรณ์ข้ามวัน (มากกว่า 1 วัน) ต้องเตือนก่อนเสมอ ให้อาจารย์พิจารณาเป็นรายกรณี
+    if (isMultiDay && hasEquipmentSelected) {
+      setShowMultiDayWarning(true);
+      return;
+    }
+
+    await performSubmit();
+  };
+
+  const confirmMultiDayAndSubmit = async () => {
+    setShowMultiDayWarning(false);
+    await performSubmit();
   };
 
   if (submitted) {
@@ -386,7 +405,10 @@ export default function BookingForm() {
                 <input type="time" value={form.endTime} onChange={update("endTime")} className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm" />
               </div>
             </div>
-            <p className="text-xs text-neutral-400 mt-2">* ยืม/ขอใช้ได้ในวันและเวลาราชการ ไม่อนุญาตให้ยืมข้ามวัน</p>
+            <p className="text-xs text-neutral-400 mt-2">
+              * เลือกวันคืนต่างจากวันเริ่มใช้ได้ (จองหลายวัน) — หากมีการยืมอุปกรณ์ร่วมด้วยและจองมากกว่า 1 วัน
+              ระบบจะแจ้งเตือนให้ติดต่ออาจารย์ผู้รับผิดชอบก่อนส่งคำขอ
+            </p>
           </Section>
 
           {/* ข้อตกลงความรับผิดชอบ */}
@@ -420,8 +442,40 @@ export default function BookingForm() {
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? "กำลังตรวจสอบและบันทึก..." : "ส่งคำขอจอง"}
           </button>
+
+          <p className="text-xs text-neutral-400 leading-relaxed mt-4 text-center">
+            การยื่นขอจองห้องแล็บ และยืมอุปกรณ์ ให้นิสิตยื่นในระบบได้ในเวลาราชการ 8.30-16.30 น. เฉพาะวันจันทร์
+            และวันพฤหัส และการพิจารณาอนุมัติจะดำเนินการภายในวันจันทร์ และพฤหัส เท่านั้น
+          </p>
         </div>
       </div>
+
+      {showMultiDayWarning && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-lg">
+            <h3 className="text-sm font-semibold text-neutral-900 mb-2">ยืมอุปกรณ์มากกว่า 1 วัน</h3>
+            <p className="text-sm text-neutral-600 leading-relaxed mb-5">
+              กรณียืมอุปกรณ์มากกว่า 1 วัน ให้แจ้งอาจารย์ผู้รับผิดชอบ และจะพิจารณาความเหมาะสมเป็นรายกรณี
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowMultiDayWarning(false)}
+                className="text-sm px-3 py-1.5 rounded-md text-neutral-600 hover:bg-neutral-100"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={confirmMultiDayAndSubmit}
+                disabled={loading}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-orange-600 hover:bg-orange-700 disabled:bg-orange-200 text-white font-medium"
+              >
+                {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                เข้าใจแล้ว ดำเนินการต่อ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
