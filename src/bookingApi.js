@@ -11,6 +11,35 @@ async function getIdsByNames(table, names) {
 }
 
 /**
+ * เช็คแบบเร็ว (advisory) ว่าห้องไหน "มีการจองทับซ้อนช่วงวันที่นี้บ้าง" ใช้แสดงในฟอร์มจอง
+ * เพื่อให้นิสิตเลือกห้องได้ถูกตั้งแต่แรก ก่อนกดส่งจริง (ไม่ได้เช็คเวลาละเอียด แค่ระดับวัน)
+ * การเช็คที่แม่นยำจริงจะเกิดตอน submit ผ่าน checkRoomConflicts อีกที
+ * คืนค่า: { roomName: boolean(มีคนจองทับช่วงนี้บ้างไหม) }
+ */
+export async function getRoomAvailabilityHint({ useDate, returnDate }) {
+  const rDate = returnDate || useDate;
+
+  const { data: allRooms, error: roomsErr } = await supabase.from("rooms").select("id, name");
+  if (roomsErr) throw roomsErr;
+
+  const { data, error } = await supabase
+    .from("booking_rooms")
+    .select(`room_id, rooms(name), bookings!inner(use_date, return_date, status)`)
+    .lte("bookings.use_date", rDate)
+    .gte("bookings.return_date", useDate)
+    .in("bookings.status", ["pending", "approved", "borrowed"]);
+
+  if (error) throw error;
+
+  const occupiedRoomIds = new Set(data.map((row) => row.room_id));
+  const result = {};
+  for (const r of allRooms) {
+    result[r.name] = occupiedRoomIds.has(r.id);
+  }
+  return result;
+}
+
+/**
  * เช็คว่าห้องที่เลือก "ว่าง" ในช่วงเวลาที่ขอหรือไม่ (รองรับจองหลายวัน)
  * เทียบช่วงวันที่ทับซ้อนกัน (existing.use_date <= newReturnDate AND existing.return_date >= newUseDate)
  * แล้วค่อยเช็คช่วงเวลาในแต่ละวันทับซ้อนกันด้วย

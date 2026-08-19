@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { createBooking } from "./bookingApi";
+import { createBooking, getRoomAvailabilityHint } from "./bookingApi";
 import { useAuth } from "./AuthContext";
 
 const ROOMS = ["Production Studio", "Control Room", "Sound Recording Room", "Computer (Mac PC)"];
@@ -132,6 +132,8 @@ export default function BookingForm() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [roomAvailability, setRoomAvailability] = useState(null); // { roomName: boolean(ไม่ว่าง) }
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showMultiDayWarning, setShowMultiDayWarning] = useState(false);
 
@@ -160,6 +162,29 @@ export default function BookingForm() {
   };
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  // เช็คห้องว่าง/ไม่ว่างแบบเร็ว (advisory) ทันทีที่เลือกวันที่ครบ ให้นิสิตเห็นก่อนเลือกห้อง
+  useEffect(() => {
+    if (!form.useDate) {
+      setRoomAvailability(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingAvailability(true);
+    getRoomAvailabilityHint({ useDate: form.useDate, returnDate: form.returnDate })
+      .then((result) => {
+        if (!cancelled) setRoomAvailability(result);
+      })
+      .catch(() => {
+        if (!cancelled) setRoomAvailability(null);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingAvailability(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.useDate, form.returnDate]);
 
   const hasEquipmentSelected = Object.entries(form.equipment).some(([, qty]) => qty > 0);
   const isMultiDay = form.useDate && form.returnDate && form.returnDate !== form.useDate;
@@ -323,10 +348,40 @@ export default function BookingForm() {
 
           {/* ห้อง Lab */}
           <Section number="03" title="ห้อง LAB ที่ต้องการใช้">
+            {!form.useDate ? (
+              <p className="text-xs text-neutral-400 mb-3">
+                * เลือกวันที่ต้องการใช้งานในหัวข้อ 05 ด้านล่างก่อน เพื่อดูว่าห้องไหนว่าง
+              </p>
+            ) : checkingAvailability ? (
+              <p className="text-xs text-neutral-400 mb-3 flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                กำลังเช็คห้องว่าง...
+              </p>
+            ) : (
+              <p className="text-xs text-neutral-400 mb-3">
+                สถานะห้องสำหรับวันที่เลือก (เช็คเบื้องต้น ระบบจะเช็คซ้ำอีกครั้งตอนส่งคำขอ)
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-y-3">
-              {ROOMS.map((room) => (
-                <Checkbox key={room} label={room} checked={form.rooms.includes(room)} onChange={() => toggleRoom(room)} />
-              ))}
+              {ROOMS.map((room) => {
+                const isOccupied = roomAvailability?.[room];
+                return (
+                  <div key={room} className="flex items-center justify-between gap-2">
+                    <Checkbox label={room} checked={form.rooms.includes(room)} onChange={() => toggleRoom(room)} />
+                    {roomAvailability && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${
+                          isOccupied
+                            ? "border-red-200 bg-red-50 text-red-600"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-600"
+                        }`}
+                      >
+                        {isOccupied ? "ไม่ว่าง" : "ว่าง"}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
               <div>
                 <Checkbox
                   label="อื่นๆ"
