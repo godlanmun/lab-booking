@@ -256,7 +256,34 @@ export default function CalendarView() {
 
         {selectedDay && (
           <div className="mt-4 bg-white border border-neutral-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-neutral-900 mb-3">รายการวันที่ {selectedDay}</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 mb-3">
+              สถานะห้องวันที่ {selectedDay}
+            </h3>
+
+            {/* สรุปห้องว่าง/ไม่ว่างเป็นรายห้อง เฉพาะกรณีดูภาพรวม "ทุกห้อง" */}
+            {roomFilter === "all" && rooms.length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {rooms.map((r) => {
+                  const isOccupied = occupiedRoomsByDate[selectedDay]?.has(r.id);
+                  return (
+                    <div
+                      key={r.id}
+                      className={`flex items-center gap-2 text-sm px-3 py-2 rounded-md border ${
+                        isOccupied
+                          ? "border-red-200 bg-red-50 text-red-700"
+                          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${isOccupied ? "bg-red-500" : "bg-emerald-500"}`} />
+                      <span className="truncate">{r.name}</span>
+                      <span className="ml-auto text-xs shrink-0">{isOccupied ? "ไม่ว่าง" : "ว่าง"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <p className="text-xs text-neutral-400 mb-2">รายการจองในวันนี้</p>
             {selectedBookings.length === 0 ? (
               <p className="text-sm text-neutral-400">ไม่มีการจองในวันนี้</p>
             ) : (
