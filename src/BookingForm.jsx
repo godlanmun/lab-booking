@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Clock } from "lucide-react";
 import { createBooking, getRoomAvailabilityHint } from "./bookingApi";
 import { useAuth } from "./AuthContext";
 
@@ -498,10 +498,13 @@ export default function BookingForm() {
             {loading ? "กำลังตรวจสอบและบันทึก..." : "ส่งคำขอจอง"}
           </button>
 
-          <p className="text-xs text-neutral-400 leading-relaxed mt-4 text-center">
-            การยื่นขอจองห้องแล็บ และยืมอุปกรณ์ ให้นิสิตยื่นในระบบได้ในเวลาราชการ 8.30-16.30 น. เฉพาะวันจันทร์
-            และวันพฤหัส และการพิจารณาอนุมัติจะดำเนินการภายในวันจันทร์ และพฤหัส เท่านั้น
-          </p>
+          <div className="mt-5 bg-red-50 border-2 border-red-200 rounded-lg px-4 py-3.5 flex items-start gap-2.5">
+            <Clock className="w-4.5 h-4.5 text-red-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700 leading-relaxed font-medium text-left">
+              การยื่นขอจองห้องแล็บ และยืมอุปกรณ์ ให้นิสิตยื่นในระบบได้ในเวลาราชการ 8.30-16.30 น. เฉพาะวันจันทร์
+              และวันพฤหัสบดี และการพิจารณาอนุมัติจะดำเนินการภายในวันจันทร์ และพฤหัสบดี เท่านั้น
+            </p>
+          </div>
         </div>
       </div>
 
