@@ -11,8 +11,20 @@ import {
   Pencil,
   Trash2,
   ShieldCheck,
+  CalendarClock,
 } from "lucide-react";
 import { listBookings, reviewBooking, updateBookingDetails, deleteBooking } from "./reviewApi";
+
+function formatSubmittedDate(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear() + 543; // พ.ศ.
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month}/${year} ${hh}:${mm} น.`;
+}
 
 const PURPOSE_LABEL = {
   teaching: "การเรียนการสอนในรายวิชา",
@@ -259,6 +271,10 @@ function BookingCard({ booking, onApprove, onReject, onEdit, onDelete, busy }) {
         </div>
 
         <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-neutral-600 mb-3">
+          <span className="flex items-center gap-1.5 text-neutral-400">
+            <CalendarClock className="w-3.5 h-3.5" />
+            ยื่นคำขอเมื่อ {formatSubmittedDate(booking.created_at)}
+          </span>
           <span className="flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-neutral-400" />
             {booking.use_date} · {booking.start_time?.slice(0, 5)}–{booking.end_time?.slice(0, 5)} น.
