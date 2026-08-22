@@ -10,6 +10,7 @@ import {
   Users,
   Menu,
   X,
+  BookOpen,
 } from "lucide-react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
@@ -20,6 +21,7 @@ import StaffDashboard from "./StaffDashboard.jsx";
 import CalendarView from "./CalendarView.jsx";
 import UsageSummary from "./UsageSummary.jsx";
 import MembersPage from "./MembersPage.jsx";
+import GuidePage from "./GuidePage.jsx";
 import { signOut } from "./authApi";
 import { SunburstMotif, LogoBadge } from "./ThemeUI";
 
@@ -36,6 +38,7 @@ function TopNav() {
     { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck, roles: ["instructor", "admin"] },
     { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3, roles: ["instructor", "admin"] },
     { path: "/members", label: "จัดการสมาชิก", icon: Users, roles: ["instructor", "admin"] },
+    { path: "/guide", label: "คู่มือการใช้งาน", icon: BookOpen, roles: ["student", "instructor", "admin"] },
   ].filter((item) => !profile || item.roles.includes(profile.role));
 
   const roleLabel =
@@ -207,6 +210,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["instructor", "admin"]}>
               <MembersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/guide"
+          element={
+            <ProtectedRoute>
+              <GuidePage />
             </ProtectedRoute>
           }
         />
