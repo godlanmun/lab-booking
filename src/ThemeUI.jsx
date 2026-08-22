@@ -34,13 +34,13 @@ export function SunburstMotif({ opacity = 0.05, className = "", animate = false 
   );
 }
 
-export function LogoBadge({ size = 28 }) {
+export function LogoBadge({ size = 28, className = "" }) {
   return (
     <img
       src={buLogo}
       alt="ตราสัญลักษณ์มหาวิทยาลัยบูรพา"
       style={{ width: size, height: size }}
-      className="object-contain"
+      className={`object-contain ${className}`}
     />
   );
 }
@@ -63,7 +63,7 @@ export function TrackLaneDivider() {
 export function PageStamp() {
   return (
     <div className="text-center mt-2">
-      <LogoBadge size={34} />
+      <LogoBadge size={34} className="mx-auto" />
       <p className="font-display text-[10px] text-[#c2bba6] tracking-widest mt-2">
         คณะวิทยาศาสตร์การกีฬา · มหาวิทยาลัยบูรพา
       </p>
