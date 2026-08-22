@@ -8,12 +8,12 @@ export async function listCalendarBookings({ startDate, endDate }) {
   const { data, error } = await supabase
     .from("bookings")
     .select(
-      `id, use_date, start_time, end_time, status, purpose,
+      `id, use_date, return_date, start_time, end_time, status, purpose,
        users:user_id (prefix, full_name),
        booking_rooms ( rooms ( id, name ) )`
     )
-    .gte("use_date", startDate)
     .lte("use_date", endDate)
+    .gte("return_date", startDate)
     .in("status", ["pending", "approved", "borrowed"])
     .order("start_time", { ascending: true });
 

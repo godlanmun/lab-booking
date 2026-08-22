@@ -79,8 +79,23 @@ export default function CalendarView() {
     for (const b of bookings) {
       const rooms = b.booking_rooms.map((r) => r.rooms);
       if (roomFilter !== "all" && !rooms.some((r) => String(r.id) === roomFilter)) continue;
-      if (!map[b.use_date]) map[b.use_date] = [];
-      map[b.use_date].push({ ...b, roomNames: rooms.map((r) => r.name).join(", ") });
+
+      const roomNames = rooms.map((r) => r.name).join(", ");
+      const start = new Date(b.use_date + "T00:00:00");
+      const end = new Date((b.return_date || b.use_date) + "T00:00:00");
+      const isMultiDay = b.return_date && b.return_date !== b.use_date;
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const iso = toISODate(d);
+        if (!map[iso]) map[iso] = [];
+        map[iso].push({
+          ...b,
+          roomNames,
+          isMultiDay,
+          isFirstDay: iso === b.use_date,
+          isLastDay: iso === (b.return_date || b.use_date),
+        });
+      }
     }
     return map;
   }, [bookings, roomFilter]);
@@ -238,9 +253,12 @@ export default function CalendarView() {
                     {dayBookings.slice(0, 3).map((b) => (
                       <div
                         key={b.id}
-                        title={`${b.roomNames} · ${b.start_time?.slice(0, 5)}-${b.end_time?.slice(0, 5)}`}
+                        title={`${b.roomNames} · ${b.start_time?.slice(0, 5)}-${b.end_time?.slice(0, 5)}${
+                          b.isMultiDay ? ` · จองหลายวัน (${b.use_date} - ${b.return_date})` : ""
+                        }`}
                         className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate ${STATUS_STYLE[b.status]}`}
                       >
+                        {b.isMultiDay ? (b.isFirstDay ? "▶ " : b.isLastDay ? "◀ " : "▬ ") : ""}
                         {b.start_time?.slice(0, 5)} {b.roomNames}
                       </div>
                     ))}
@@ -301,6 +319,11 @@ export default function CalendarView() {
                       <span className="text-neutral-400 ml-2">
                         {b.roomNames} · {b.start_time?.slice(0, 5)}–{b.end_time?.slice(0, 5)} น.
                       </span>
+                      {b.isMultiDay && (
+                        <div className="text-[11px] text-orange-600 mt-0.5">
+                          จองหลายวัน: {b.use_date} ถึง {b.return_date}
+                        </div>
+                      )}
                     </div>
                     <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_STYLE[b.status]}`}>
                       {STATUS_LABEL[b.status]}

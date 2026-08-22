@@ -298,7 +298,13 @@ function BookingCard({ booking, onApprove, onReject, onEdit, onDelete, busy }) {
           </span>
           <span className="flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-neutral-400" />
-            {booking.use_date} · {booking.start_time?.slice(0, 5)}–{booking.end_time?.slice(0, 5)} น.
+            {booking.return_date && booking.return_date !== booking.use_date
+              ? `${booking.use_date} ถึง ${booking.return_date}`
+              : booking.use_date}{" "}
+            · {booking.start_time?.slice(0, 5)}–{booking.end_time?.slice(0, 5)} น.
+            {booking.return_date && booking.return_date !== booking.use_date && (
+              <span className="text-orange-600 font-medium ml-1">(หลายวัน)</span>
+            )}
           </span>
           <span className="flex items-center gap-1.5">
             <DoorOpen className="w-3.5 h-3.5 text-neutral-400" />
