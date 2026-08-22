@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { CheckCircle2, Loader2, Clock } from "lucide-react";
 import { createBooking, getRoomAvailabilityHint } from "./bookingApi";
 import { useAuth } from "./AuthContext";
+import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
 
 const ROOMS = ["Production Studio", "Control Room", "Sound Recording Room", "Computer (Mac PC)"];
 
@@ -59,7 +60,7 @@ function Section({ number, title, children }) {
   return (
     <div className="mb-8">
       <div className="flex items-baseline gap-3 mb-4">
-        <span className="text-xs font-mono text-orange-600 tracking-widest">{number}</span>
+        <span className="text-xs font-mono text-[#B8952B] tracking-widest">{number}</span>
         <h2 className="text-sm font-semibold text-neutral-800 tracking-wide">{title}</h2>
         <div className="flex-1 h-px bg-neutral-200" />
       </div>
@@ -74,7 +75,7 @@ function Checkbox({ checked, onChange, label }) {
       <span
         onClick={onChange}
         className={`w-5 h-5 flex items-center justify-center border rounded transition-colors
-          ${checked ? "bg-orange-600 border-orange-600" : "border-neutral-300 group-hover:border-orange-400"}`}
+          ${checked ? "bg-[#B8952B] border-[#B8952B]" : "border-neutral-300 group-hover:border-[#D4AF37]"}`}
       >
         {checked && <CheckCircle2 className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
       </span>
@@ -264,10 +265,10 @@ export default function BookingForm() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#FAF8F3] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white border border-neutral-200 rounded-lg p-8 text-center shadow-sm">
-          <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="w-7 h-7 text-orange-600" />
+          <div className="w-14 h-14 rounded-full bg-[#FBF3E6] flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-7 h-7 text-[#B8952B]" />
           </div>
           <h1 className="text-lg font-semibold text-neutral-900 mb-1">ส่งคำขอแล้ว</h1>
           <p className="text-sm text-neutral-500 mb-6">
@@ -280,7 +281,7 @@ export default function BookingForm() {
           </div>
           <button
             onClick={() => setSubmitted(false)}
-            className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+            className="text-sm text-[#B8952B] hover:text-[#96762a] font-medium"
           >
             ← กลับไปแก้ไขคำขอ
           </button>
@@ -290,14 +291,11 @@ export default function BookingForm() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] py-10 px-4">
+    <div className="min-h-screen bg-[#FAF8F3] py-10 px-4">
       <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <p className="text-xs font-mono text-orange-600 tracking-widest mb-1">คณะวิทยาศาสตร์การกีฬา</p>
-          <h1 className="text-xl font-semibold text-neutral-900">แบบฟอร์มขอยืม-คืนครุภัณฑ์ / ห้อง LAB</h1>
-        </div>
+        <PageHeader title="แบบฟอร์มขอยืม-คืนครุภัณฑ์ / ห้อง LAB" />
 
-        <div className="bg-white border border-neutral-200 rounded-lg p-6 sm:p-8">
+        <div className="bg-white border border-[#EAE3D0] rounded-lg p-6 sm:p-8 shadow-[0_1px_3px_rgba(33,33,36,0.04)]">
           {/* ผู้ขอใช้ (จากบัญชีที่ login) */}
           <Section number="01" title="ข้อมูลผู้ขอใช้">
             <div className="bg-neutral-50 rounded-md px-4 py-3 text-sm">
@@ -322,7 +320,7 @@ export default function BookingForm() {
                     name="purpose"
                     checked={form.purpose === p.value}
                     onChange={() => setForm((f) => ({ ...f, purpose: p.value }))}
-                    className="accent-orange-600"
+                    className="accent-[#B8952B]"
                   />
                   {p.label}
                 </label>
@@ -472,7 +470,7 @@ export default function BookingForm() {
               <span
                 onClick={() => setForm((f) => ({ ...f, liabilityAgreed: !f.liabilityAgreed }))}
                 className={`mt-0.5 w-5 h-5 shrink-0 flex items-center justify-center border rounded transition-colors
-                  ${form.liabilityAgreed ? "bg-orange-600 border-orange-600" : "border-neutral-300 bg-white"}`}
+                  ${form.liabilityAgreed ? "bg-[#B8952B] border-[#B8952B]" : "border-neutral-300 bg-white"}`}
               >
                 {form.liabilityAgreed && <CheckCircle2 className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
               </span>
@@ -492,7 +490,7 @@ export default function BookingForm() {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-300 text-white text-sm font-medium py-3 rounded-md transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-[#B8952B] hover:bg-[#96762a] disabled:bg-[#e3cf94] text-white text-sm font-medium py-3 rounded-md transition-colors"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? "กำลังตรวจสอบและบันทึก..." : "ส่งคำขอจอง"}
@@ -506,6 +504,9 @@ export default function BookingForm() {
             </p>
           </div>
         </div>
+
+        <TrackLaneDivider />
+        <PageStamp />
       </div>
 
       {showMultiDayWarning && (
@@ -525,7 +526,7 @@ export default function BookingForm() {
               <button
                 onClick={confirmMultiDayAndSubmit}
                 disabled={loading}
-                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-orange-600 hover:bg-orange-700 disabled:bg-orange-200 text-white font-medium"
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-[#B8952B] hover:bg-[#96762a] disabled:bg-[#eeddb0] text-white font-medium"
               >
                 {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 เข้าใจแล้ว ดำเนินการต่อ

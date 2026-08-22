@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, DoorOpen, Camera, ClipboardList, ChevronDown, ChevronUp, ShieldCheck, CreditCard } from "lucide-react";
 import { getUsageSummary } from "./summaryApi";
+import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
 
 function toISODate(d) {
   // ห้ามใช้ toISOString() เพราะแปลงเป็น UTC ทำให้วันที่เพี้ยนไป 1 วันสำหรับโซนเวลาไทย (UTC+7)
@@ -83,12 +84,9 @@ export default function UsageSummary() {
   const maxEquipCount = equipmentStats[0]?.[1] || 1;
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] py-10 px-4">
+    <div className="min-h-screen bg-[#FAF8F3] py-10 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <p className="text-xs font-mono text-orange-600 tracking-widest mb-1">คณะวิทยาศาสตร์การกีฬา</p>
-          <h1 className="text-xl font-semibold text-neutral-900">สรุปการใช้ห้องและอุปกรณ์</h1>
-        </div>
+        <PageHeader title="สรุปการใช้ห้องและอุปกรณ์" />
 
         <div className="flex items-end gap-3 mb-6 flex-wrap">
           <div>
@@ -159,7 +157,7 @@ export default function UsageSummary() {
                         </div>
                         <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-orange-500 rounded-full"
+                            className="h-full bg-[#FBF3E6]0 rounded-full"
                             style={{ width: `${(count / maxRoomCount) * 100}%` }}
                           />
                         </div>
@@ -319,6 +317,9 @@ export default function UsageSummary() {
             </div>
           </>
         )}
+
+        <TrackLaneDivider />
+        <PageStamp />
       </div>
     </div>
   );

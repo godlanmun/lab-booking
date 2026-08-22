@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { listCalendarBookings, listRooms } from "./calendarApi";
+import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
 
 const WEEKDAYS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 const MONTH_NAMES = [
@@ -146,12 +147,9 @@ export default function CalendarView() {
   const selectedBookings = selectedDay ? bookingsByDate[selectedDay] || [] : [];
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] py-10 px-4">
+    <div className="min-h-screen bg-[#FAF8F3] py-10 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <p className="text-xs font-mono text-orange-600 tracking-widest mb-1">คณะวิทยาศาสตร์การกีฬา</p>
-          <h1 className="text-xl font-semibold text-neutral-900">ปฏิทินการจองห้อง Lab</h1>
-        </div>
+        <PageHeader title="ปฏิทินการจองห้อง Lab" />
 
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div className="flex items-center gap-2">
@@ -233,13 +231,13 @@ export default function CalendarView() {
                   key={i}
                   onClick={() => setSelectedDay(iso)}
                   className={`text-left border-b border-r border-neutral-100 min-h-[6rem] p-1.5 hover:bg-neutral-50 transition-colors ${
-                    selectedDay === iso ? "bg-orange-50" : ""
+                    selectedDay === iso ? "bg-[#FBF3E6]" : ""
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
                     <span
                       className={`text-xs inline-flex items-center justify-center w-5 h-5 rounded-full ${
-                        isToday ? "bg-orange-600 text-white" : `text-neutral-600 ${AVAILABILITY_RING[availability]}`
+                        isToday ? "bg-[#B8952B] text-white" : `text-neutral-600 ${AVAILABILITY_RING[availability]}`
                       }`}
                     >
                       {date.getDate()}
@@ -320,7 +318,7 @@ export default function CalendarView() {
                         {b.roomNames} · {b.start_time?.slice(0, 5)}–{b.end_time?.slice(0, 5)} น.
                       </span>
                       {b.isMultiDay && (
-                        <div className="text-[11px] text-orange-600 mt-0.5">
+                        <div className="text-[11px] text-[#B8952B] mt-0.5">
                           จองหลายวัน: {b.use_date} ถึง {b.return_date}
                         </div>
                       )}
@@ -334,6 +332,9 @@ export default function CalendarView() {
             )}
           </div>
         )}
+
+        <TrackLaneDivider />
+        <PageStamp />
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { listBookings, reviewBooking, updateBookingDetails, deleteBooking } from "./reviewApi";
+import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
 
 function formatSubmittedDate(iso) {
   if (!iso) return "-";
@@ -209,7 +210,7 @@ function EditDialog({ booking, onCancel, onConfirm, busy }) {
           <button
             onClick={handleSave}
             disabled={busy}
-            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-orange-600 hover:bg-orange-700 disabled:bg-orange-200 text-white font-medium"
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md bg-[#B8952B] hover:bg-[#96762a] disabled:bg-[#eeddb0] text-white font-medium"
           >
             {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             บันทึกการแก้ไข
@@ -277,7 +278,7 @@ function BookingCard({ booking, onApprove, onReject, onEdit, onDelete, busy }) {
             <button
               onClick={() => setShowEdit(true)}
               title="แก้ไข"
-              className="p-1.5 rounded-md text-neutral-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+              className="p-1.5 rounded-md text-neutral-400 hover:text-[#B8952B] hover:bg-[#FBF3E6] transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -303,7 +304,7 @@ function BookingCard({ booking, onApprove, onReject, onEdit, onDelete, busy }) {
               : booking.use_date}{" "}
             · {booking.start_time?.slice(0, 5)}–{booking.end_time?.slice(0, 5)} น.
             {booking.return_date && booking.return_date !== booking.use_date && (
-              <span className="text-orange-600 font-medium ml-1">(หลายวัน)</span>
+              <span className="text-[#B8952B] font-medium ml-1">(หลายวัน)</span>
             )}
           </span>
           <span className="flex items-center gap-1.5">
@@ -332,7 +333,7 @@ function BookingCard({ booking, onApprove, onReject, onEdit, onDelete, busy }) {
         {equipment.length > 0 && (
           <button
             onClick={() => setExpanded((e) => !e)}
-            className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium mb-1"
+            className="flex items-center gap-1 text-xs text-[#B8952B] hover:text-[#96762a] font-medium mb-1"
           >
             {expanded ? "ซ่อนรายการอุปกรณ์" : "ดูรายการอุปกรณ์"}
             {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -503,12 +504,9 @@ export default function ApprovalPage({ reviewerId = 1 }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] py-10 px-4">
+    <div className="min-h-screen bg-[#FAF8F3] py-10 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <p className="text-xs font-mono text-orange-600 tracking-widest mb-1">คณะวิทยาศาสตร์การกีฬา</p>
-          <h1 className="text-xl font-semibold text-neutral-900">พิจารณาคำขอใช้ห้อง Lab / ยืมอุปกรณ์</h1>
-        </div>
+        <PageHeader title="พิจารณาคำขอใช้ห้อง Lab / ยืมอุปกรณ์" />
 
         <div className="flex gap-1 mb-5 border-b border-neutral-200">
           {TABS.map((t) => (
@@ -517,7 +515,7 @@ export default function ApprovalPage({ reviewerId = 1 }) {
               onClick={() => setTab(t.value)}
               className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 tab === t.value
-                  ? "border-orange-600 text-orange-600"
+                  ? "border-[#B8952B] text-[#B8952B]"
                   : "border-transparent text-neutral-500 hover:text-neutral-700"
               }`}
             >
@@ -554,6 +552,9 @@ export default function ApprovalPage({ reviewerId = 1 }) {
             ))}
           </div>
         )}
+
+        <TrackLaneDivider />
+        <PageStamp />
       </div>
 
       {toast && (

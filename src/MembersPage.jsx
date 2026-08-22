@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search, ShieldOff, ShieldCheck, Users, Pencil, Check, X } from "lucide-react";
 import { listUsers, updateUserRole, setUserActive, updateUserPhone } from "./memberApi";
 import { useAuth } from "./AuthContext";
+import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
 
 const ROLE_LABEL = { student: "นิสิต", instructor: "อาจารย์", admin: "เจ้าหน้าที่" };
 const ROLE_STYLE = {
   student: "bg-neutral-100 text-neutral-600",
-  instructor: "bg-orange-50 text-orange-700",
+  instructor: "bg-[#FBF3E6] text-[#96762a]",
   admin: "bg-blue-50 text-blue-700",
 };
 
@@ -112,12 +113,14 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] py-10 px-4">
+    <div className="min-h-screen bg-[#FAF8F3] py-10 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <p className="text-xs font-mono text-orange-600 tracking-widest mb-1">คณะวิทยาศาสตร์การกีฬา</p>
-          <h1 className="text-xl font-semibold text-neutral-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-orange-600" />
+        <div className="relative mb-6">
+          <p className="font-display text-[11px] tracking-[0.2em] text-[#B8952B] uppercase mb-1">
+            คณะวิทยาศาสตร์การกีฬา
+          </p>
+          <h1 className="font-display text-xl font-bold text-[#212124] flex items-center gap-2">
+            <Users className="w-5 h-5 text-[#B8952B]" />
             จัดการสมาชิก
           </h1>
         </div>
@@ -130,7 +133,7 @@ export default function MembersPage() {
                 onClick={() => setTab(t.value)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                   tab === t.value
-                    ? "border-orange-600 text-orange-600"
+                    ? "border-[#B8952B] text-[#B8952B]"
                     : "border-transparent text-neutral-500 hover:text-neutral-700"
                 }`}
               >
@@ -213,7 +216,7 @@ export default function MembersPage() {
                             <button
                               onClick={() => startEditPhone(u)}
                               title="แก้ไขเบอร์โทร"
-                              className="text-neutral-300 hover:text-orange-600"
+                              className="text-neutral-300 hover:text-[#B8952B]"
                             >
                               <Pencil className="w-3 h-3" />
                             </button>
@@ -264,6 +267,9 @@ export default function MembersPage() {
             </div>
           </div>
         )}
+
+        <TrackLaneDivider />
+        <PageStamp />
       </div>
 
       {toast && (

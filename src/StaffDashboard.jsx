@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { listReadyBookings, checkOutBooking, checkInBooking, setEquipmentCondition } from "./staffApi";
+import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
 
 const TABS = [
   { value: "approved", label: "รอส่งมอบ (ยืม)" },
@@ -100,7 +101,7 @@ function BookingRow({ booking, mode, onCheckOut, onCheckIn, busy }) {
         {equipment.length > 0 && (
           <button
             onClick={() => setExpanded((e) => !e)}
-            className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium mb-2"
+            className="flex items-center gap-1 text-xs text-[#B8952B] hover:text-[#96762a] font-medium mb-2"
           >
             {expanded ? "ซ่อนรายการอุปกรณ์" : `ดูรายการอุปกรณ์ (${equipment.length})`}
             {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -155,7 +156,7 @@ function BookingRow({ booking, mode, onCheckOut, onCheckIn, busy }) {
             onClick={() => onCheckOut(booking.id, idChecked)}
             disabled={busy || !idChecked}
             title={!idChecked ? "กรุณาตรวจสอบบัตรนิสิตก่อน" : ""}
-            className="w-full flex items-center justify-center gap-1.5 text-sm font-medium bg-orange-600 hover:bg-orange-700 disabled:bg-orange-200 disabled:cursor-not-allowed text-white py-2 rounded-md transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 text-sm font-medium bg-[#B8952B] hover:bg-[#96762a] disabled:bg-[#eeddb0] disabled:cursor-not-allowed text-white py-2 rounded-md transition-colors"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightCircle className="w-4 h-4" />}
             ส่งมอบ (ยืม)
@@ -238,12 +239,9 @@ export default function StaffDashboard({ staffId = 1 }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] py-10 px-4">
+    <div className="min-h-screen bg-[#FAF8F3] py-10 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <p className="text-xs font-mono text-orange-600 tracking-widest mb-1">คณะวิทยาศาสตร์การกีฬา</p>
-          <h1 className="text-xl font-semibold text-neutral-900">รับ-คืน ห้อง Lab / อุปกรณ์</h1>
-        </div>
+        <PageHeader title="รับ-คืน ห้อง Lab / อุปกรณ์" />
 
         <div className="flex gap-1 mb-5 border-b border-neutral-200">
           {TABS.map((t) => (
@@ -252,7 +250,7 @@ export default function StaffDashboard({ staffId = 1 }) {
               onClick={() => setTab(t.value)}
               className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
                 tab === t.value
-                  ? "border-orange-600 text-orange-600"
+                  ? "border-[#B8952B] text-[#B8952B]"
                   : "border-transparent text-neutral-500 hover:text-neutral-700"
               }`}
             >
@@ -293,6 +291,9 @@ export default function StaffDashboard({ staffId = 1 }) {
             ))}
           </div>
         )}
+
+        <TrackLaneDivider />
+        <PageStamp />
       </div>
 
       {toast && (
