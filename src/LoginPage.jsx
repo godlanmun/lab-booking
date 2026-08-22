@@ -76,7 +76,6 @@ export default function LoginPage() {
     password: "",
     fullName: "",
     phone: "",
-    role: "student",
     prefix: "นาย",
     studentId: "",
     major: "",
@@ -92,31 +91,25 @@ export default function LoginPage() {
       if (mode === "signin") {
         await signIn({ email: form.email, password: form.password });
       } else {
-        if (!form.email || !form.password || !form.fullName || !form.phone) {
+        if (!form.email || !form.password || !form.fullName || !form.phone || !form.studentId) {
           throw new Error("กรุณากรอกข้อมูลให้ครบถ้วน");
         }
-        if (form.role === "student" && !form.studentId) {
-          throw new Error("กรุณากรอกรหัสนิสิต");
-        }
         // เช็ครหัสนิสิตซ้ำก่อนสมัคร กันสร้างบัญชีค้างถ้ารหัสซ้ำ
-        if (form.role === "student") {
-          const taken = await isStudentIdTaken(form.studentId);
-          if (taken) {
-            throw new Error("รหัสนิสิตนี้มีผู้ใช้สมัครสมาชิกไปแล้ว กรุณาตรวจสอบรหัสนิสิตอีกครั้ง");
-          }
+        const taken = await isStudentIdTaken(form.studentId);
+        if (taken) {
+          throw new Error("รหัสนิสิตนี้มีผู้ใช้สมัครสมาชิกไปแล้ว กรุณาตรวจสอบรหัสนิสิตอีกครั้ง");
         }
         await signUp({
           email: form.email,
           password: form.password,
           fullName: form.fullName,
           phone: form.phone,
-          role: form.role,
         });
         // trigger จะสร้างแถว users ให้ก่อน แล้วค่อยเติมรายละเอียดเพิ่ม
         await new Promise((r) => setTimeout(r, 800)); // เผื่อ trigger ทำงานยังไม่เสร็จ
         await completeProfile({
           prefix: form.prefix,
-          studentId: form.role === "student" ? form.studentId : null,
+          studentId: form.studentId,
           major: form.major,
           year: form.year || null,
         });
@@ -246,51 +239,27 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <FieldLabel>สถานะ</FieldLabel>
-                  <div className="flex gap-2">
-                    {[
-                      { value: "student", label: "นิสิต" },
-                      { value: "instructor", label: "อาจารย์" },
-                    ].map((r) => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, role: r.value }))}
-                        className={`flex-1 text-sm py-2 rounded-md border transition-colors ${
-                          form.role === r.value
-                            ? "bg-[#212124] border-[#212124] text-[#D4AF37] font-medium"
-                            : "border-[#E4DFCF] text-[#7a7568] hover:border-[#C9A227]"
-                        }`}
-                      >
-                        {r.label}
-                      </button>
-                    ))}
-                  </div>
+                  <FieldLabel>รหัสนิสิต</FieldLabel>
+                  <input
+                    placeholder="6xxxxxxx"
+                    value={form.studentId}
+                    onChange={update("studentId")}
+                    className={inputCls}
+                  />
                 </div>
-
-                {form.role === "student" && (
-                  <div>
-                    <FieldLabel>รหัสนิสิต</FieldLabel>
-                    <input
-                      placeholder="6xxxxxxx"
-                      value={form.studentId}
-                      onChange={update("studentId")}
-                      className={inputCls}
-                    />
-                  </div>
-                )}
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <FieldLabel>สาขาวิชา</FieldLabel>
                     <input placeholder="สาขาวิชา" value={form.major} onChange={update("major")} className={inputCls} />
                   </div>
-                  {form.role === "student" && (
-                    <div>
-                      <FieldLabel>ชั้นปี</FieldLabel>
-                      <input placeholder="ชั้นปี" value={form.year} onChange={update("year")} className={inputCls} />
-                    </div>
-                  )}
+                  <div>
+                    <FieldLabel>ชั้นปี</FieldLabel>
+                    <input placeholder="ชั้นปี" value={form.year} onChange={update("year")} className={inputCls} />
+                  </div>
                 </div>
+                <p className="text-[11px] text-[#9a958a] leading-relaxed">
+                  * การสมัครสมาชิกผ่านหน้านี้สำหรับนิสิตเท่านั้น หากเป็นอาจารย์กรุณาติดต่อเจ้าหน้าที่เพื่อขอสิทธิ์เพิ่มเติม
+                </p>
               </>
             )}
           </div>

@@ -39,12 +39,14 @@ export async function isStudentIdTaken(studentId) {
  * หลังสมัคร Supabase trigger จะสร้างแถวใน public.users ให้อัตโนมัติ (role/full_name/phone เบื้องต้น)
  * แล้วเราค่อย update รายละเอียดเพิ่ม (รหัสนิสิต, สาขา, ชั้นปี) ด้วย completeProfile()
  */
-export async function signUp({ email, password, fullName, phone, role }) {
+export async function signUp({ email, password, fullName, phone }) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: fullName, phone, role }, // ส่งเข้า trigger handle_new_auth_user
+      // หมายเหตุ: ไม่ส่ง role อีกต่อไป — ฝั่งฐานข้อมูล (trigger) บังคับ role='student' เสมอ
+      // สำหรับผู้สมัครใหม่ทุกคน อาจารย์/เจ้าหน้าที่ต้องถูกเลื่อนสิทธิ์โดยผู้ดูแลระบบเท่านั้น
+      data: { full_name: fullName, phone },
     },
   });
   if (error) throw error;
