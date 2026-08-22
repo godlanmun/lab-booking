@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   CalendarPlus,
   CalendarDays,
@@ -140,35 +139,16 @@ const STAFF_GUIDE = [
 
 export default function GuidePage() {
   const { profile } = useAuth();
-  const [tab, setTab] = useState(
-    profile?.role === "instructor" || profile?.role === "admin" ? "staff" : "student"
-  );
-
-  const guide = tab === "student" ? STUDENT_GUIDE : STAFF_GUIDE;
+  const isStaff = profile?.role === "instructor" || profile?.role === "admin";
+  const guide = isStaff ? STAFF_GUIDE : STUDENT_GUIDE;
+  const roleLabel = isStaff ? "สำหรับอาจารย์ / เจ้าหน้าที่" : "สำหรับนิสิต";
 
   return (
     <div className="min-h-screen bg-[#FAF8F3] py-10 px-4">
       <div className="max-w-3xl mx-auto">
         <PageHeader title="คู่มือการใช้งานระบบ" />
 
-        <div className="flex gap-1 mb-6 bg-[#EFEADB] rounded-md p-1 max-w-sm">
-          <button
-            onClick={() => setTab("student")}
-            className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors font-display ${
-              tab === "student" ? "bg-[#212124] text-[#D4AF37] shadow-sm" : "text-[#7a7568] hover:text-[#232323]"
-            }`}
-          >
-            สำหรับนิสิต
-          </button>
-          <button
-            onClick={() => setTab("staff")}
-            className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors font-display ${
-              tab === "staff" ? "bg-[#212124] text-[#D4AF37] shadow-sm" : "text-[#7a7568] hover:text-[#232323]"
-            }`}
-          >
-            สำหรับอาจารย์ / เจ้าหน้าที่
-          </button>
-        </div>
+        <p className="font-display text-xs text-[#B8952B] font-medium mb-6 -mt-2">{roleLabel}</p>
 
         <div className="space-y-4">
           {guide.map((g, i) => (
