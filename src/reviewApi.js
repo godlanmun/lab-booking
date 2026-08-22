@@ -71,8 +71,8 @@ export async function updateBookingDetails({
   if (endTime <= startTime) {
     throw new Error("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น");
   }
-  if (returnDate && returnDate !== useDate) {
-    throw new Error("ไม่อนุญาตให้ยืม/ใช้งานข้ามวัน กรุณาเลือกวันคืนเป็นวันเดียวกับวันที่ใช้");
+  if (returnDate && returnDate < useDate) {
+    throw new Error("วันที่คืนต้องอยู่หลังหรือเท่ากับวันที่เริ่มใช้งาน");
   }
 
   const [sh, sm] = startTime.split(":").map(Number);

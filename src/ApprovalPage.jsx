@@ -109,25 +109,46 @@ function EditDialog({ booking, onCancel, onConfirm, busy }) {
       setLocalError("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น");
       return;
     }
+    if (form.returnDate < form.useDate) {
+      setLocalError("วันที่คืนต้องอยู่หลังหรือเท่ากับวันที่เริ่มใช้งาน");
+      return;
+    }
     onConfirm(form);
   };
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full shadow-lg">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
         <h3 className="text-sm font-semibold text-neutral-900 mb-3">แก้ไขคำขอจอง</h3>
 
         <div className="space-y-3">
-          <div>
-            <label className="text-xs text-neutral-400 mb-1 block">วันที่ใช้ / คืน</label>
-            <input
-              type="date"
-              value={form.useDate}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, useDate: e.target.value, returnDate: e.target.value }))
-              }
-              className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-neutral-400 mb-1 block">วันที่เริ่มใช้</label>
+              <input
+                type="date"
+                value={form.useDate}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    useDate: e.target.value,
+                    // ถ้าวันคืนเดิมอยู่ก่อนวันเริ่มใช้ใหม่ ให้เลื่อนตามไปด้วยกันเหตุผล
+                    returnDate: f.returnDate < e.target.value ? e.target.value : f.returnDate,
+                  }))
+                }
+                className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-neutral-400 mb-1 block">วันที่คืน</label>
+              <input
+                type="date"
+                min={form.useDate}
+                value={form.returnDate}
+                onChange={update("returnDate")}
+                className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
