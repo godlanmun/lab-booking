@@ -498,10 +498,14 @@ export default function BookingForm() {
 
           <div className="mt-5 bg-red-50 border-2 border-red-200 rounded-lg px-4 py-3.5 flex items-start gap-2.5">
             <Clock className="w-4.5 h-4.5 text-red-600 shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700 leading-relaxed font-medium text-left">
-              การยื่นขอจองห้องแล็บ และยืมอุปกรณ์ ให้นิสิตยื่นในระบบได้ในเวลาราชการ 8.30-16.30 น. เฉพาะวันจันทร์
-              และวันพฤหัสบดี และการพิจารณาอนุมัติจะดำเนินการภายในวันจันทร์ และพฤหัสบดี เท่านั้น
-            </p>
+            <ol className="text-sm text-red-700 leading-relaxed font-medium text-left list-decimal list-inside space-y-1">
+              <li>
+                การยื่นขอจองห้องแล็บ และยืมอุปกรณ์ ให้นิสิตยื่นในระบบได้ในเวลา 8.30-16.30 น. เฉพาะวันจันทร์
+                และวันพฤหัสบดี
+              </li>
+              <li>ช่วงเวลาการใช้งาน 8.30 - 19.00 น. นอกเหนือเวลาที่กำหนดอาจารย์จะพิจารณาเป็นกรณีไป</li>
+              <li>การพิจารณาอนุมัติจะดำเนินการภายในวันจันทร์ และพฤหัสบดี เท่านั้น</li>
+            </ol>
           </div>
         </div>
 
