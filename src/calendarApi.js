@@ -22,7 +22,7 @@ export async function listCalendarBookings({ startDate, endDate }) {
 }
 
 export async function listRooms() {
-  const { data, error } = await supabase.from("rooms").select("id, name").order("id");
+  const { data, error } = await supabase.from("rooms").select("id, name").eq("is_active", true).order("id");
   if (error) throw error;
   return data;
 }

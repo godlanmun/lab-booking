@@ -1,54 +1,9 @@
 import { useState, useEffect } from "react";
 import { CheckCircle2, Loader2, Clock } from "lucide-react";
 import { createBooking, getRoomAvailabilityHint } from "./bookingApi";
+import { listActiveRooms, listActiveEquipmentGrouped } from "./inventoryApi";
 import { useAuth } from "./AuthContext";
 import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
-
-const ROOMS = ["Production Studio", "Control Room", "Sound Recording Room", "Computer (Mac PC)"];
-
-const EQUIPMENT_CATEGORIES = [
-  {
-    name: "กล้อง",
-    items: [
-      { key: "กล้อง Panasonic", label: "กล้อง Panasonic" },
-      { key: "กล้อง Canon DSLR EOS80D", label: "กล้อง Canon DSLR EOS80D" },
-      { key: "กล้อง Sony Mirrorless ZV-E10", label: "กล้อง Sony Mirrorless ZV-E10" },
-    ],
-  },
-  {
-    name: "เลนส์และอุปกรณ์เสริมกล้อง",
-    items: [
-      { key: "เลนส์", label: "เลนส์" },
-      { key: "ฟิวเตอร์เลนส์", label: "ฟิวเตอร์เลนส์" },
-      { key: "ขาตั้งกล้อง", label: "ขาตั้งกล้อง" },
-      { key: "ราง Dolly", label: "ราง Dolly" },
-    ],
-  },
-  {
-    name: "เสียง",
-    items: [
-      { key: "ไมค์", label: "ไมค์" },
-      { key: "ไมโครโฟน Saramonic", label: "ไมโครโฟน Saramonic" },
-    ],
-  },
-  {
-    name: "พลังงานและสายสัญญาณ",
-    items: [
-      { key: "แบตเตอรี่", label: "แบตเตอรี่" },
-      { key: "ที่ชาร์จแบต", label: "ที่ชาร์จแบต" },
-      { key: "สายไฟ", label: "สายไฟ" },
-      { key: "สายสัญญาณ", label: "สายสัญญาณ" },
-      { key: "Memory", label: "Memory" },
-    ],
-  },
-  {
-    name: "อื่นๆ",
-    items: [
-      { key: "กระเป๋า", label: "กระเป๋า" },
-      { key: "equipment_other", label: "อื่นๆ (โปรดระบุ)" },
-    ],
-  },
-];
 
 const PURPOSES = [
   { value: "teaching", label: "การเรียนการสอนในรายวิชา" },
@@ -137,6 +92,42 @@ export default function BookingForm() {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showMultiDayWarning, setShowMultiDayWarning] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [equipmentCategories, setEquipmentCategories] = useState([]);
+  const [loadingInventory, setLoadingInventory] = useState(true);
+
+  // ดึงรายชื่อห้อง/อุปกรณ์ที่เปิดใช้งานอยู่จากฐานข้อมูลแบบสด
+  // (เพื่อให้ห้อง/อุปกรณ์ที่อาจารย์-เจ้าหน้าที่เพิ่มผ่านหน้า "จัดการห้อง/อุปกรณ์" ใช้งานได้ทันที ไม่ต้องแก้โค้ด)
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([listActiveRooms(), listActiveEquipmentGrouped()])
+      .then(([roomRows, grouped]) => {
+        if (cancelled) return;
+        setRooms(roomRows.map((r) => r.name));
+        // เพิ่มตัวเลือก "อื่นๆ (โปรดระบุ)" ต่อท้ายหมวด "อื่นๆ" เสมอ (เป็น field ข้อความอิสระ ไม่ผูกกับตาราง equipment)
+        const withOther = grouped.map((cat) => ({
+          name: cat.category,
+          items: cat.items.map((it) => ({ key: it.name, label: it.name })),
+        }));
+        const otherIdx = withOther.findIndex((c) => c.name === "อื่นๆ");
+        const otherEntry = { key: "equipment_other", label: "อื่นๆ (โปรดระบุ)" };
+        if (otherIdx >= 0) {
+          withOther[otherIdx].items.push(otherEntry);
+        } else {
+          withOther.push({ name: "อื่นๆ", items: [otherEntry] });
+        }
+        setEquipmentCategories(withOther);
+      })
+      .catch(() => {
+        if (!cancelled) setError("โหลดรายชื่อห้อง/อุปกรณ์ไม่สำเร็จ กรุณารีเฟรชหน้าใหม่");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingInventory(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleRoom = (room) => {
     setForm((f) => ({
@@ -346,7 +337,12 @@ export default function BookingForm() {
 
           {/* ห้อง Lab */}
           <Section number="03" title="ห้อง LAB ที่ต้องการใช้">
-            {!form.useDate ? (
+            {loadingInventory ? (
+              <p className="text-xs text-neutral-400 mb-3 flex items-center gap-1.5">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                กำลังโหลดรายชื่อห้อง...
+              </p>
+            ) : !form.useDate ? (
               <p className="text-xs text-neutral-400 mb-3">
                 * เลือกวันที่ต้องการใช้งานในหัวข้อ 05 ด้านล่างก่อน เพื่อดูว่าห้องไหนว่าง
               </p>
@@ -361,7 +357,7 @@ export default function BookingForm() {
               </p>
             )}
             <div className="grid grid-cols-2 gap-y-3">
-              {ROOMS.map((room) => {
+              {rooms.map((room) => {
                 const isOccupied = roomAvailability?.[room];
                 return (
                   <div key={room} className="flex items-center justify-between gap-2">
@@ -401,7 +397,7 @@ export default function BookingForm() {
           {/* อุปกรณ์ */}
           <Section number="04" title="อุปกรณ์ที่ต้องการยืม">
             <div className="space-y-5">
-              {EQUIPMENT_CATEGORIES.map((cat) => (
+              {equipmentCategories.map((cat) => (
                 <div key={cat.name}>
                   <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">
                     {cat.name}
@@ -489,7 +485,7 @@ export default function BookingForm() {
 
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || loadingInventory}
             className="w-full flex items-center justify-center gap-2 bg-[#B8952B] hover:bg-[#96762a] disabled:bg-[#e3cf94] text-white text-sm font-medium py-3 rounded-md transition-colors"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}

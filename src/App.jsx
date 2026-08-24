@@ -13,6 +13,7 @@ import {
   BookOpen,
   ChevronDown,
   LayoutGrid,
+  Boxes,
 } from "lucide-react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
@@ -24,6 +25,7 @@ import CalendarView from "./CalendarView.jsx";
 import UsageSummary from "./UsageSummary.jsx";
 import MembersPage from "./MembersPage.jsx";
 import GuidePage from "./GuidePage.jsx";
+import ManageInventoryPage from "./ManageInventoryPage.jsx";
 import { signOut } from "./authApi";
 import { SunburstMotif, LogoBadge } from "./ThemeUI";
 
@@ -50,6 +52,7 @@ function TopNav() {
     { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck },
     { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3 },
     { path: "/members", label: "จัดการสมาชิก", icon: Users },
+    { path: "/inventory", label: "จัดการห้อง/อุปกรณ์", icon: Boxes },
   ];
   const showManageMenu = profile && (profile.role === "instructor" || profile.role === "admin");
   const isManageActive = MANAGE_ITEMS.some((item) => item.path === location.pathname);
@@ -289,6 +292,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["instructor", "admin"]}>
               <MembersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute allowedRoles={["instructor", "admin"]}>
+              <ManageInventoryPage />
             </ProtectedRoute>
           }
         />
