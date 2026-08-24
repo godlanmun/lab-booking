@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   CalendarPlus,
   ClipboardCheck,
@@ -11,6 +11,8 @@ import {
   Menu,
   X,
   BookOpen,
+  ChevronDown,
+  LayoutGrid,
 } from "lucide-react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
@@ -30,16 +32,36 @@ function TopNav() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const manageRef = useRef(null);
 
-  const NAV_ITEMS = [
+  // เมนูหลัก — เห็นได้ทุก role อยู่นอก dropdown เสมอ
+  const PRIMARY_ITEMS = [
     { path: "/", label: "ยื่นคำขอจอง", icon: CalendarPlus, roles: ["student", "instructor", "admin"] },
     { path: "/calendar", label: "ปฏิทินการจอง", icon: CalendarDays, roles: ["student", "instructor", "admin"] },
-    { path: "/approve", label: "อนุมัติ", icon: ClipboardCheck, roles: ["instructor", "admin"] },
-    { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck, roles: ["instructor", "admin"] },
-    { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3, roles: ["instructor", "admin"] },
-    { path: "/members", label: "จัดการสมาชิก", icon: Users, roles: ["instructor", "admin"] },
     { path: "/guide", label: "คู่มือการใช้งาน", icon: BookOpen, roles: ["student", "instructor", "admin"] },
   ].filter((item) => !profile || item.roles.includes(profile.role));
+
+  // เมนูของอาจารย์/เจ้าหน้าที่ — รวมไว้ใน dropdown "จัดการระบบ" กันเมนูล้นจอ
+  const MANAGE_ITEMS = [
+    { path: "/approve", label: "อนุมัติ", icon: ClipboardCheck },
+    { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck },
+    { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3 },
+    { path: "/members", label: "จัดการสมาชิก", icon: Users },
+  ];
+  const showManageMenu = profile && (profile.role === "instructor" || profile.role === "admin");
+  const isManageActive = MANAGE_ITEMS.some((item) => item.path === location.pathname);
+
+  // ปิด dropdown เมื่อคลิกนอกพื้นที่
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (manageRef.current && !manageRef.current.contains(e.target)) {
+        setManageOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const roleLabel =
     profile?.role === "student" ? "นิสิต" : profile?.role === "instructor" ? "อาจารย์" : "เจ้าหน้าที่";
@@ -67,8 +89,8 @@ function TopNav() {
             </div>
 
             {/* เมนูแนวนอน — เห็นเฉพาะจอกว้าง (md ขึ้นไป) ไม่ต้องเลื่อนดู */}
-            <div className="hidden md:flex gap-1">
-              {NAV_ITEMS.map((item) => {
+            <div className="hidden md:flex items-center gap-1">
+              {PRIMARY_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const active = location.pathname === item.path;
                 return (
@@ -86,6 +108,46 @@ function TopNav() {
                   </Link>
                 );
               })}
+
+              {/* dropdown รวมเมนูของอาจารย์/เจ้าหน้าที่ */}
+              {showManageMenu && (
+                <div className="relative" ref={manageRef}>
+                  <button
+                    onClick={() => setManageOpen((o) => !o)}
+                    className={`flex items-center gap-1.5 text-sm font-medium px-3 py-3 border-b-2 whitespace-nowrap transition-colors ${
+                      isManageActive || manageOpen
+                        ? "border-[#D4AF37] text-[#D4AF37]"
+                        : "border-transparent text-[#9a9aa2] hover:text-[#e0e0e4]"
+                    }`}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                    จัดการระบบ
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${manageOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {manageOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-56 bg-[#2A2A2E] border border-[#D4AF37]/20 rounded-lg shadow-xl py-1.5 z-20">
+                      {MANAGE_ITEMS.map((item) => {
+                        const Icon = item.icon;
+                        const active = location.pathname === item.path;
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setManageOpen(false)}
+                            className={`flex items-center gap-2.5 text-sm px-3.5 py-2.5 transition-colors ${
+                              active ? "text-[#D4AF37] bg-[#D4AF37]/10" : "text-[#c9c9ce] hover:bg-white/5"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -115,7 +177,7 @@ function TopNav() {
           )}
         </div>
 
-        {/* เมนูแบบ dropdown แนวตั้ง — โผล่มาเฉพาะจอเล็กตอนกดปุ่มแฮมเบอร์เกอร์ */}
+        {/* เมนูแบบ dropdown แนวตั้ง — โผล่มาเฉพาะจอเล็กตอนกดปุ่มแฮมเบอร์เกอร์ (แสดงทุกเมนูรวมกัน ไม่ต้องแยกกลุ่ม เพราะเรียงแนวตั้งอยู่แล้ว) */}
         {mobileOpen && (
           <div className="md:hidden border-t border-white/10 py-2">
             {profile && (
@@ -124,7 +186,7 @@ function TopNav() {
                 {profile.full_name} · {roleLabel}
               </div>
             )}
-            {NAV_ITEMS.map((item) => {
+            {[...PRIMARY_ITEMS, ...(showManageMenu ? MANAGE_ITEMS : [])].map((item) => {
               const Icon = item.icon;
               const active = location.pathname === item.path;
               return (
