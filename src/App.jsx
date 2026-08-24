@@ -39,8 +39,10 @@ function TopNav() {
   const PRIMARY_ITEMS = [
     { path: "/", label: "ยื่นคำขอจอง", icon: CalendarPlus, roles: ["student", "instructor", "admin"] },
     { path: "/calendar", label: "ปฏิทินการจอง", icon: CalendarDays, roles: ["student", "instructor", "admin"] },
-    { path: "/guide", label: "คู่มือการใช้งาน", icon: BookOpen, roles: ["student", "instructor", "admin"] },
   ].filter((item) => !profile || item.roles.includes(profile.role));
+
+  // เมนูคู่มือ — เห็นได้ทุก role วางไว้ต่อจากปุ่ม "จัดการระบบ"
+  const GUIDE_ITEM = { path: "/guide", label: "คู่มือการใช้งาน", icon: BookOpen };
 
   // เมนูของอาจารย์/เจ้าหน้าที่ — รวมไว้ใน dropdown "จัดการระบบ" กันเมนูล้นจอ
   const MANAGE_ITEMS = [
@@ -73,8 +75,10 @@ function TopNav() {
   };
 
   return (
-    <div className="bg-[#212124] sticky top-0 z-40 relative overflow-hidden">
-      <SunburstMotif opacity={0.07} animate className="absolute -top-36 left-1/2 -translate-x-1/2 w-[420px] h-[420px]" />
+    <div className="bg-[#212124] sticky top-0 z-40 relative">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <SunburstMotif opacity={0.07} animate className="absolute -top-36 left-1/2 -translate-x-1/2 w-[420px] h-[420px]" />
+      </div>
       <div className="max-w-4xl mx-auto px-4 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -148,6 +152,19 @@ function TopNav() {
                   )}
                 </div>
               )}
+
+              {/* คู่มือการใช้งาน — วางต่อจากปุ่มจัดการระบบ เห็นได้ทุก role */}
+              <Link
+                to={GUIDE_ITEM.path}
+                className={`flex items-center gap-1.5 text-sm font-medium px-3 py-3 border-b-2 whitespace-nowrap transition-colors ${
+                  location.pathname === GUIDE_ITEM.path
+                    ? "border-[#D4AF37] text-[#D4AF37]"
+                    : "border-transparent text-[#9a9aa2] hover:text-[#e0e0e4]"
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                {GUIDE_ITEM.label}
+              </Link>
             </div>
           </div>
 
@@ -186,7 +203,7 @@ function TopNav() {
                 {profile.full_name} · {roleLabel}
               </div>
             )}
-            {[...PRIMARY_ITEMS, ...(showManageMenu ? MANAGE_ITEMS : [])].map((item) => {
+            {[...PRIMARY_ITEMS, ...(showManageMenu ? MANAGE_ITEMS : []), GUIDE_ITEM].map((item) => {
               const Icon = item.icon;
               const active = location.pathname === item.path;
               return (
