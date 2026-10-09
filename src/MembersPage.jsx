@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Search, ShieldOff, ShieldCheck, Users, Pencil, Check, X } from "lucide-react";
-import { listUsers, updateUserRole, setUserActive, updateUserPhone } from "./memberApi";
+import { Loader2, Search, ShieldOff, ShieldCheck, Users, Pencil, Check, X, KeyRound, Eye, EyeOff } from "lucide-react";
+import { listUsers, updateUserRole, setUserActive, updateUserPhone, updateUserCredentials } from "./memberApi";
 import { useAuth } from "./AuthContext";
 import { PageHeader, PageStamp, TrackLaneDivider } from "./ThemeUI";
 
@@ -29,6 +29,46 @@ export default function MembersPage() {
   const [toast, setToast] = useState("");
   const [editingPhoneId, setEditingPhoneId] = useState(null);
   const [phoneDraft, setPhoneDraft] = useState("");
+
+  const [credUser, setCredUser] = useState(null);
+  const [credEmail, setCredEmail] = useState("");
+  const [credPw, setCredPw] = useState("");
+  const [credPw2, setCredPw2] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [credBusy, setCredBusy] = useState(false);
+  const [credError, setCredError] = useState("");
+
+  const openCred = (u) => {
+    setCredUser(u);
+    setCredEmail(u.email || "");
+    setCredPw("");
+    setCredPw2("");
+    setShowPw(false);
+    setCredError("");
+  };
+
+  const saveCred = async () => {
+    setCredError("");
+    const emailChanged = credEmail.trim().toLowerCase() !== (credUser.email || "").toLowerCase();
+    if (!emailChanged && !credPw) return setCredError("ยังไม่ได้แก้ไขอะไร");
+    if (credPw && credPw.length < 6) return setCredError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+    if (credPw && credPw !== credPw2) return setCredError("ยืนยันรหัสผ่านไม่ตรงกัน");
+    setCredBusy(true);
+    try {
+      await updateUserCredentials(credUser.id, {
+        email: emailChanged ? credEmail.trim() : undefined,
+        password: credPw || undefined,
+      });
+      setToast(credPw ? "บันทึกข้อมูลล็อกอินและรหัสผ่านใหม่แล้ว" : "แก้ไขอีเมลล็อกอินเรียบร้อย");
+      setCredUser(null);
+      await load();
+    } catch (err) {
+      setCredError(err.message || "ดำเนินการไม่สำเร็จ");
+    } finally {
+      setCredBusy(false);
+      setTimeout(() => setToast(""), 2500);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -225,7 +265,16 @@ export default function MembersPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => openCred(u)}
+                        disabled={busy}
+                        title="แก้ไข username / รหัสผ่าน"
+                        className="flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-[#D4AF37]/60 text-[#96762a] hover:bg-[#FBF3E6] disabled:opacity-50"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        ล็อกอิน
+                      </button>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_STYLE[u.role]}`}>
                         {ROLE_LABEL[u.role]}
                       </span>
@@ -271,6 +320,83 @@ export default function MembersPage() {
         <TrackLaneDivider />
         <PageStamp />
       </div>
+
+      {credUser && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5 border-t-4 border-[#D4AF37]">
+            <h2 className="font-display text-base font-bold text-[#212124] flex items-center gap-2 mb-1">
+              <KeyRound className="w-4 h-4 text-[#B8952B]" />
+              แก้ไขข้อมูลล็อกอิน
+            </h2>
+            <p className="text-xs text-neutral-500 mb-4">
+              {credUser.prefix}
+              {credUser.full_name}
+            </p>
+
+            <label className="block text-xs font-medium text-neutral-700 mb-1">Username (อีเมลที่ใช้ล็อกอิน)</label>
+            <input
+              type="email"
+              value={credEmail}
+              onChange={(e) => setCredEmail(e.target.value)}
+              className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm mb-4"
+            />
+
+            <label className="block text-xs font-medium text-neutral-700 mb-1">ตั้งรหัสผ่านใหม่</label>
+            <div className="relative mb-2">
+              <input
+                type={showPw ? "text" : "password"}
+                value={credPw}
+                onChange={(e) => setCredPw(e.target.value)}
+                placeholder="เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน"
+                autoComplete="new-password"
+                className="w-full border border-neutral-300 rounded-md px-3 py-2 pr-9 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+              >
+                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <input
+              type={showPw ? "text" : "password"}
+              value={credPw2}
+              onChange={(e) => setCredPw2(e.target.value)}
+              placeholder="ยืนยันรหัสผ่านใหม่"
+              autoComplete="new-password"
+              className="w-full border border-neutral-300 rounded-md px-3 py-2 text-sm mb-2"
+            />
+            <p className="text-[11px] text-neutral-400 mb-3 leading-relaxed">
+              รหัสผ่านเดิมถูกเข้ารหัสไว้ ไม่สามารถดูได้ — ทำได้เฉพาะตั้งรหัสใหม่ (อย่างน้อย 6 ตัวอักษร) แล้วแจ้งผู้ใช้
+            </p>
+
+            {credError && (
+              <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                {credError}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setCredUser(null)}
+                disabled={credBusy}
+                className="px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 rounded-md"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={saveCred}
+                disabled={credBusy}
+                className="px-4 py-1.5 text-sm font-medium bg-[#212124] text-[#D4AF37] rounded-md hover:bg-black disabled:opacity-60 flex items-center gap-1.5"
+              >
+                {credBusy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                บันทึก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-sm px-4 py-2.5 rounded-full shadow-lg">

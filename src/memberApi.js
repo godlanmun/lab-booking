@@ -36,3 +36,26 @@ export async function setUserActive(userId, isActive) {
   const { error } = await supabase.from("users").update({ is_active: isActive }).eq("id", userId);
   if (error) throw error;
 }
+
+/**
+ * แก้ไขอีเมลล็อกอิน (username) และ/หรือตั้งรหัสผ่านใหม่ให้ผู้ใช้
+ * ทำผ่าน Edge Function "admin-update-user" (ใช้ service role ฝั่งเซิร์ฟเวอร์ ไม่เปิดเผยในหน้าเว็บ)
+ * ส่ง email หรือ password อย่างใดอย่างหนึ่งหรือทั้งคู่
+ */
+export async function updateUserCredentials(userId, { email, password }) {
+  const { data, error } = await supabase.functions.invoke("admin-update-user", {
+    body: { userId, email, password },
+  });
+  if (data?.error) throw new Error(data.error);
+  if (error) {
+    let msg = error.message;
+    try {
+      const body = await error.context?.json?.();
+      if (body?.error) msg = body.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  return data;
+}
