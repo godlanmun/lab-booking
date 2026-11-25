@@ -14,6 +14,7 @@ import {
   ChevronDown,
   LayoutGrid,
   Boxes,
+  Star,
 } from "lucide-react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
@@ -26,6 +27,8 @@ import UsageSummary from "./UsageSummary.jsx";
 import MembersPage from "./MembersPage.jsx";
 import GuidePage from "./GuidePage.jsx";
 import ManageInventoryPage from "./ManageInventoryPage.jsx";
+import EvaluationGate from "./EvaluationForm.jsx";
+import EvaluationSummary from "./EvaluationSummary.jsx";
 import { signOut } from "./authApi";
 import { SunburstMotif, LogoBadge } from "./ThemeUI";
 
@@ -51,6 +54,7 @@ function TopNav() {
     { path: "/approve", label: "อนุมัติ", icon: ClipboardCheck },
     { path: "/staff", label: "การคืนอุปกรณ์", icon: PackageCheck },
     { path: "/summary", label: "สรุปการใช้ห้องและอุปกรณ์", icon: BarChart3 },
+    { path: "/evaluations", label: "ผลการประเมินความพึงพอใจ", icon: Star },
     { path: "/members", label: "จัดการสมาชิก", icon: Users },
     { path: "/inventory", label: "จัดการห้อง/อุปกรณ์", icon: Boxes },
   ];
@@ -251,7 +255,9 @@ function AppRoutes() {
           path="/"
           element={
             <ProtectedRoute>
-              <BookingForm />
+              <EvaluationGate>
+                <BookingForm />
+              </EvaluationGate>
             </ProtectedRoute>
           }
         />
@@ -276,6 +282,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["instructor", "admin"]}>
               <StaffDashboardWrapper />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluations"
+          element={
+            <ProtectedRoute allowedRoles={["instructor", "admin"]}>
+              <EvaluationSummary />
             </ProtectedRoute>
           }
         />
